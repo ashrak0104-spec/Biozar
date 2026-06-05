@@ -1,0 +1,15 @@
+{
+  "private": true,
+  "name": "biozar",
+  "version": "1.1.0",
+  "description": "BIOZAR – Console de Pilotage (100% gratuit, Cloudflare + Supabase)",
+  "scripts": {
+    "dev": "npx serve .",
+    "android": "npm --prefix biozar-app run android",
+    "lint": "npm --prefix functions run lint && npm --prefix ai run lint"
+  },
+  "browserslist": [
+    "last 2 versions",
+    "not dead"
+  ]
+}

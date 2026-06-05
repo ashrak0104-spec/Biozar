@@ -1,0 +1,33 @@
+{
+  "appId": "mg.biozar.app",
+  "appName": "BIOZAR",
+  "version": "1.0.0",
+  "versionCode": 1,
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": true,
+    "backgroundColor": "#1a3d1f",
+    "buildOptions": {
+      "keystorePath": "biozar-release.keystore",
+      "keystorePassword": "biozar2026",
+      "keystoreAlias": "biozar",
+      "keystoreAliasPassword": "biozar2026",
+      "releaseType": "APK"
+    }
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1500,
+      "backgroundColor": "#1a3d1f",
+      "androidSplashResourceName": "splash",
+      "androidScaleType": "CENTER_CROP",
+      "showSpinner": false,
+      "splashFullScreen": true,
+      "splashImmersive": true,
+      "launchAutoHide": false
+    }
+  }
+}

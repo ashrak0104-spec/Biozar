@@ -1,0 +1,31 @@
+{
+  "name": "biozar-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "BIOZAR - Console de Pilotage Bio Madagascar",
+  "main": "index.js",
+  "scripts": {
+    "build": "npm run sync",
+    "sync": "npx cap sync",
+    "android": "npx cap open android",
+    "add-android": "npx cap add android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.0.0",
+    "@capacitor/cli": "^6.0.0",
+    "@capacitor/core": "^6.0.0",
+    "@dataconnect/generated": "file:src/dataconnect-generated",
+    "firebase": "^12.13.0"
+  },
+  "keywords": [
+    "biozar",
+    "madagascar",
+    "bio",
+    "agriculture"
+  ],
+  "author": "BIOZAR Madagascar",
+  "license": "MIT",
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5"
+  }
+}

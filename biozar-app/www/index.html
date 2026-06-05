@@ -1,0 +1,1879 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BIOZAR – Console de Pilotage</title>
+  <meta name="description" content="Tableau de bord de pilotage pour BIOZAR, ferme bio de contre-saison à Madagascar." />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#2d6a35" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet" />
+  <script src="chart.js"></script>
+  <script src="firebase-init.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
+  <style>
+    :root{--green-dark:#1a3d1f;--green-mid:#2d6a35;--green-light:#4caf50;--green-pale:#e8f5e9;--green-glow:#81c784;--gold:#f9a825;--gold-light:#fff8e1;--red:#e53935;--red-light:#ffebee;--blue:#1976d2;--blue-light:#e3f2fd;--purple:#7b1fa2;--purple-light:#f3e5f5;--bg:#f4f6f0;--surface:#fff;--border:#dde8dd;--text:#1c2b1e;--text-muted:#5a7060;--sidebar-w:260px;--radius:16px;--shadow:0 4px 24px rgba(26,61,31,.10);--shadow-lg:0 8px 40px rgba(26,61,31,.16)}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);display:flex;min-height:100vh;overflow-x:hidden}
+    .sidebar{width:var(--sidebar-w);background:linear-gradient(180deg,var(--green-dark) 0%,#0f2612 100%);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;box-shadow:4px 0 24px rgba(0,0,0,.25);transition:transform .3s ease}
+    .sidebar-logo{padding:24px 20px 16px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:12px}
+    .sidebar-logo-text{color:#fff}
+    .sidebar-logo-text h1{font-family:'Playfair Display',serif;font-size:22px;line-height:1}
+    .sidebar-logo-text p{font-size:10px;color:var(--green-glow);margin-top:2px;letter-spacing:.5px}
+    .sidebar-nav{flex:1;padding:16px 12px;overflow-y:auto}
+    .nav-section-label{font-size:10px;letter-spacing:1.5px;color:rgba(255,255,255,.35);text-transform:uppercase;padding:12px 8px 6px;font-weight:600}
+    .nav-item{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:10px;cursor:pointer;color:rgba(255,255,255,.65);font-size:14px;font-weight:500;transition:all .2s ease;margin-bottom:2px}
+    .nav-item:hover{background:rgba(255,255,255,.08);color:#fff}
+    .nav-item.active{background:linear-gradient(135deg,var(--green-mid),var(--green-light));color:#fff;box-shadow:0 4px 12px rgba(76,175,80,.35)}
+    .nav-item .icon{font-size:18px;width:24px;text-align:center}
+    .sidebar-footer{padding:12px 16px;border-top:1px solid rgba(255,255,255,.08)}
+    .sidebar-copy{color:rgba(255,255,255,.3);font-size:11px;text-align:center;padding-top:4px}
+    .main{margin-left:var(--sidebar-w);flex:1;display:flex;flex-direction:column;min-height:100vh}
+    .topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:16px 32px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:90;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+    .topbar-title{font-size:20px;font-weight:700;color:var(--green-dark)}
+    .topbar-title span{color:var(--green-light)}
+    .topbar-right{display:flex;align-items:center;gap:12px}
+    .topbar-date{font-size:13px;color:var(--text-muted);background:var(--green-pale);padding:6px 14px;border-radius:20px;font-weight:500}
+    .topbar-badge{background:linear-gradient(135deg,var(--green-mid),var(--green-light));color:#fff;padding:6px 16px;border-radius:20px;font-size:12px;font-weight:600}
+    .content{padding:32px;flex:1}
+    .page{opacity:0;transform:translateY(20px);pointer-events:none;position:absolute;width:100%;left:0;top:0;transition:opacity .5s cubic-bezier(.4,0,.2,1),transform .5s cubic-bezier(.4,0,.2,1)}
+    .page.active{opacity:1;transform:translateY(0);pointer-events:auto;position:relative}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes slideUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes slideIn{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
+    .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px;margin-bottom:28px}
+    .kpi-card{background:var(--surface);border-radius:var(--radius);padding:24px;box-shadow:var(--shadow);border:1px solid var(--border);position:relative;overflow:hidden;transition:transform .2s,box-shadow .2s}
+    .kpi-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg)}
+    .kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+    .kpi-card.green::before{background:linear-gradient(90deg,var(--green-mid),var(--green-light))}
+    .kpi-card.gold::before{background:linear-gradient(90deg,#f57f17,var(--gold))}
+    .kpi-card.blue::before{background:linear-gradient(90deg,#1565c0,var(--blue))}
+    .kpi-card.red::before{background:linear-gradient(90deg,#b71c1c,var(--red))}
+    .kpi-card.purple::before{background:linear-gradient(90deg,#4a148c,var(--purple))}
+    .kpi-icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:14px}
+    .kpi-value{font-size:26px;font-weight:800;color:var(--green-dark);margin-bottom:4px}
+    .kpi-label{font-size:13px;color:var(--text-muted);font-weight:500}
+    .kpi-sub{font-size:12px;margin-top:8px;font-weight:600}
+    .kpi-sub.up{color:var(--green-light)}.kpi-sub.down{color:var(--red)}.kpi-sub.neutral{color:var(--text-muted)}
+    .card{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);border:1px solid var(--border);overflow:hidden;margin-bottom:20px}
+    .card-header{padding:20px 24px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+    .card-header h3{font-size:16px;font-weight:700;color:var(--green-dark)}
+    .card-header p{font-size:12px;color:var(--text-muted);margin-top:2px}
+    .card-body{padding:20px 24px}
+    .chart-wrap{position:relative;height:250px}
+    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px}
+    .three-col{display:grid;grid-template-columns:2fr 1fr;gap:20px;margin-bottom:20px}
+    .three-col-equal{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;margin-bottom:20px}
+    .data-table{width:100%;border-collapse:collapse}
+    .data-table th{text-align:left;padding:10px 14px;font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--text-muted);background:var(--green-pale);border-bottom:1px solid var(--border)}
+    .data-table td{padding:12px 14px;font-size:13px;border-bottom:1px solid #f0f4f0}
+    .data-table tr:hover td{background:#f9fbf9}
+    .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+    .badge-green{background:var(--green-pale);color:var(--green-mid)}
+    .badge-gold{background:var(--gold-light);color:#e65100}
+    .badge-red{background:var(--red-light);color:var(--red)}
+    .badge-blue{background:var(--blue-light);color:var(--blue)}
+    .badge-purple{background:var(--purple-light);color:var(--purple)}
+    .btn-primary{background:linear-gradient(135deg,var(--green-mid),var(--green-light));color:#fff;border:none;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;box-shadow:0 4px 12px rgba(76,175,80,.3)}
+    .btn-primary:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(76,175,80,.4)}
+    .btn-admin{background:linear-gradient(135deg,#6a1b9a,#ab47bc);color:#fff;border:none;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;box-shadow:0 4px 12px rgba(171,71,188,.3)}
+    .btn-outline{background:transparent;color:var(--green-mid);border:1.5px solid var(--green-mid);padding:10px 20px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s}
+    .btn-outline:hover{background:var(--green-pale)}
+    .btn-danger{background:var(--red-light);color:var(--red);border:none;padding:6px 12px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer}
+    .btn-edit{background:var(--blue-light);color:var(--blue);border:none;padding:6px 12px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer}
+    .form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+    .form-group{display:flex;flex-direction:column;gap:6px}
+    .form-group label{font-size:12px;font-weight:600;color:var(--text-muted)}
+    .form-group input,.form-group select{padding:10px 14px;border:1.5px solid var(--border);border-radius:8px;font-family:'Inter',sans-serif;font-size:14px;color:var(--text);background:var(--surface);transition:border-color .2s;outline:none}
+    .form-group input:focus{border-color:var(--green-light)}
+    .section-header{margin-bottom:24px}
+    .section-header h2{font-size:26px;font-weight:800;color:var(--green-dark)}
+    .section-header p{color:var(--text-muted);font-size:14px;margin-top:4px}
+    .stat-banner{background:linear-gradient(135deg,var(--green-dark) 0%,var(--green-mid) 100%);border-radius:var(--radius);padding:28px 32px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;color:#fff;box-shadow:var(--shadow-lg)}
+    .stat-banner-text h2{font-size:24px;font-weight:800;margin-bottom:4px}
+    .stat-banner-text p{font-size:14px;color:var(--green-glow)}
+    .stat-banner-numbers{display:flex;gap:40px}
+    .stat-num{text-align:center}
+    .stat-num .val{font-size:28px;font-weight:800}
+    .stat-num .lbl{font-size:12px;color:var(--green-glow);margin-top:2px}
+    .progress-bar{height:8px;background:var(--green-pale);border-radius:4px;overflow:hidden}
+    .progress-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--green-mid),var(--green-light));transition:width 1.2s cubic-bezier(.25,1,.5,1)}
+    .progress-row{margin-bottom:16px}
+    .progress-label{display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px}
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(6px);z-index:500;display:none;align-items:center;justify-content:center}
+    .modal-overlay.open{display:flex}
+    .modal-box{background:var(--surface);border-radius:20px;padding:40px;width:400px;max-width:calc(100vw - 40px);box-shadow:0 20px 60px rgba(0,0,0,.3);animation:slideUp .35s cubic-bezier(.25,1,.5,1)}
+    .modal-logo{text-align:center;margin-bottom:24px}
+    .modal-error{background:var(--red-light);color:var(--red);padding:10px 14px;border-radius:8px;font-size:13px;font-weight:600;margin-bottom:14px;display:none}
+    .modal-error.show{display:block}
+    .prod-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);backdrop-filter:blur(4px);z-index:600;display:none;align-items:center;justify-content:center}
+    .prod-modal-overlay.open{display:flex}
+    .prod-modal{background:var(--surface);border-radius:20px;padding:32px;width:480px;max-width:calc(100vw - 40px);box-shadow:0 20px 60px rgba(0,0,0,.3);animation:slideUp .3s ease}
+    .timeline{padding:4px 0}
+    .tl-item{display:flex;gap:16px;margin-bottom:20px}
+    .tl-dot{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+    .tl-dot.done{background:var(--green-pale)}
+    .tl-dot.active{background:linear-gradient(135deg,var(--green-mid),var(--green-light));box-shadow:0 4px 12px rgba(76,175,80,.4)}
+    .tl-dot.pending{background:#f5f5f5}
+    .tl-line{width:2px;flex:1;background:var(--border)}
+    .product-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px}
+    .product-card{background:var(--green-pale);border-radius:12px;padding:20px;text-align:center;border:1px solid var(--border);transition:transform .2s}
+    .product-card:hover{transform:translateY(-3px)}
+    .product-emoji{font-size:36px;margin-bottom:10px}
+    .product-name{font-size:14px;font-weight:700}
+    .product-price{font-size:20px;font-weight:800;color:var(--green-mid)}
+    .risk-item{padding:12px 16px;border-radius:10px;margin-bottom:10px;border-left:4px solid}
+    .risk-item.high{background:var(--red-light);border-color:var(--red)}
+    .risk-item.medium{background:var(--gold-light);border-color:var(--gold)}
+    .risk-item.low{background:var(--green-pale);border-color:var(--green-light)}
+    .risk-title{font-size:13px;font-weight:700;margin-bottom:3px}
+    .risk-solution{font-size:12px;color:var(--text-muted)}
+    .week-cards{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+    .week-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;border-top:3px solid var(--green-light)}
+    .week-card .week-num{font-size:11px;font-weight:700;color:var(--green-light)}
+    .week-card .week-theme{font-size:15px;font-weight:700;color:var(--green-dark);margin-bottom:6px}
+    .admin-tabs{display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap}
+    .admin-tab{padding:10px 20px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface);font-size:13px;font-weight:600;cursor:pointer;color:var(--text-muted);transition:all .2s}
+    .admin-tab.active{background:linear-gradient(135deg,#6a1b9a,#ab47bc);color:#fff;border-color:transparent;box-shadow:0 4px 12px rgba(171,71,188,.3)}
+    .admin-tab-content{display:none}
+    .admin-tab-content.active{display:block;animation:fadeIn .3s ease}
+    .empty{text-align:center;padding:40px;color:var(--text-muted)}
+    .empty-icon{font-size:48px;margin-bottom:12px}
+    .empty p{font-size:14px}
+    .toast-container{position:fixed;bottom:24px;right:24px;z-index:999;display:flex;flex-direction:column;gap:10px}
+    .toast{background:var(--green-dark);color:#fff;padding:14px 20px;border-radius:12px;font-size:14px;font-weight:500;box-shadow:0 8px 32px rgba(0,0,0,.25);animation:slideIn .3s ease;display:flex;align-items:center;gap:10px}
+    .toast.error{background:var(--red)}
+    .tab-btn{background:none;border:none;padding:8px 16px;font-size:14px;font-weight:600;color:var(--text-muted);cursor:pointer;border-radius:8px;transition:all .2s}
+    .tab-btn:hover{color:var(--green-mid);background:rgba(45,106,53,0.05)}
+    .tab-btn.active{background:var(--green-pale);color:var(--green-dark);box-shadow:inset 0 -2px 0 var(--green-mid)}
+    .kanban-col{flex:1;min-width:250px;background:#f8faf9;border:1px solid var(--border);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px;max-height:600px;overflow-y:auto}
+    .kanban-col-header{padding:4px 6px;border-bottom:2px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+    .kanban-col-title{font-size:12px;font-weight:700;color:var(--green-dark);text-transform:uppercase}
+    .kanban-card{background:#fff;border:1px solid #e2ede3;border-radius:8px;padding:10px;box-shadow:0 2px 4px rgba(45,106,53,0.03);cursor:pointer;transition:all .2s}
+    .kanban-card:hover{box-shadow:0 4px 8px rgba(45,106,53,0.08);transform:translateY(-2px)}
+    .kanban-card-title{font-weight:700;font-size:13px;color:var(--green-dark)}
+    .info-box{background:var(--blue-light);border:1px solid #bbdefb;border-radius:10px;padding:14px 16px;font-size:13px;color:#1565c0;margin-bottom:16px;display:flex;gap:10px}
+    .info-box-admin{background:var(--purple-light);border:1px solid #e1bee7;border-radius:10px;padding:14px 16px;font-size:13px;color:#6a1b9a;margin-bottom:16px;display:flex;gap:10px}
+    .divider{height:1px;background:var(--border);margin:20px 0}
+    .danger-zone{background:var(--red-light);border:1px solid #ffcdd2;border-radius:12px;padding:20px;margin-top:16px}
+    .danger-zone h4{color:var(--red);font-size:15px;font-weight:700;margin-bottom:12px}
+    .charge-edit-row{display:grid;grid-template-columns:1fr auto;align-items:center;gap:12px;padding:12px 16px;border:1px solid var(--border);border-radius:10px;margin-bottom:10px}
+    .product-edit-row{display:grid;grid-template-columns:auto 1fr auto auto auto;align-items:center;gap:12px;padding:14px 16px;border:1px solid var(--border);border-radius:10px;margin-bottom:10px}
+    .product-edit-emoji{font-size:28px;width:40px;text-align:center}
+    .export-btn{display:flex;align-items:center;gap:10px;padding:14px 20px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface);cursor:pointer;font-size:14px;font-weight:600;transition:all .2s;margin-bottom:10px;width:100%}
+    .export-btn:hover{border-color:var(--green-light);background:var(--green-pale)}
+    .menu-btn{display:none;position:fixed;top:16px;left:16px;z-index:200;background:var(--green-dark);color:#fff;border:none;width:42px;height:42px;border-radius:10px;font-size:20px;cursor:pointer}
+    @media(max-width:900px){.sidebar{transform:translateX(-100%)}.sidebar.open{transform:translateX(0)}.main{margin-left:0}.menu-btn{display:flex}.two-col,.three-col{grid-template-columns:1fr}.content{padding:16px;padding-top:70px}.form-row{grid-template-columns:1fr}}
+    .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:99}
+    .overlay.open{display:block}
+    ::-webkit-scrollbar{width:6px}
+    ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+    body.locked{overflow:hidden}
+    .role-production .hide-production{display:none!important}
+    .role-commercial .hide-commercial{display:none!important}
+    .role-admin .hide-admin{display:none!important}
+    .requires-admin{display:none}
+    .role-admin .requires-admin{display:block}
+    .requires-commercial-admin{display:none}
+    .role-admin .requires-commercial-admin,.role-commercial .requires-commercial-admin{display:block}
+  </style>
+</head>
+<body class="locked">
+
+<!-- SPLASH SCREEN -->
+<div id="appSplash" style="position:fixed;inset:0;z-index:10000;background:linear-gradient(145deg,#0f2612,#1a3d1f 40%,#2d6a35);display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .8s ease;opacity:1">
+  <div style="animation:fadeIn 1s ease;text-align:center">
+    <div style="width:200px;height:200px;background:rgba(255,255,255,0.1);border-radius:50%;margin:0 auto 20px;display:flex;align-items:center;justify-content:center;font-size:80px">🌿</div>
+    <h1 style="font-family:'Playfair Display',serif;font-size:42px;color:#fff;letter-spacing:-0.5px">BIOZAR</h1>
+    <p style="color:rgba(255,255,255,0.55);font-size:15px;letter-spacing:2px;text-transform:uppercase;margin-top:6px">Bio de Madagascar</p>
+  </div>
+</div>
+
+<!-- LOGIN MODAL -->
+<div class="modal-overlay open" id="loginModal" style="background:var(--green-dark);z-index:9999">
+  <div class="modal-box">
+    <div class="modal-logo">
+      <div style="width:80px;height:80px;background:var(--green-pale);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:40px;margin:0 auto 12px">🌿</div>
+      <h2>BIOZAR</h2>
+      <p>Connexion à votre espace sécurisé</p>
+    </div>
+    <div class="modal-error" id="loginError">❌ Identifiant ou mot de passe incorrect.</div>
+    <div class="form-group" style="margin-bottom:12px">
+      <label>Identifiant</label>
+      <input type="text" id="loginUsername" placeholder="Ex: admin" onkeydown="if(event.key==='Enter')document.getElementById('loginPassword').focus()" />
+    </div>
+    <div class="form-group" style="margin-bottom:16px">
+      <label>Mot de passe</label>
+      <input type="password" id="loginPassword" placeholder="••••••••" onkeydown="if(event.key==='Enter')checkLogin()" />
+    </div>
+    <button class="btn-primary" style="width:100%" onclick="checkLogin()">🔓 Se connecter</button>
+  </div>
+</div>
+
+<!-- PRODUCT EDIT MODAL -->
+<div class="prod-modal-overlay" id="prodModal">
+  <div class="prod-modal">
+    <h3 style="font-size:18px;font-weight:800;color:var(--purple);margin-bottom:20px">✏️ Modifier le Produit</h3>
+    <input type="hidden" id="pm-idx" />
+    <div class="form-row">
+      <div class="form-group"><label>Emoji</label><input type="text" id="pm-emoji" maxlength="2" /></div>
+      <div class="form-group"><label>Nom</label><input type="text" id="pm-name" /></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Prix (Ar)</label><input type="number" id="pm-price" /></div>
+      <div class="form-group"><label>Coût (Ar)</label><input type="number" id="pm-cost" /></div>
+    </div>
+    <div class="form-group" style="margin-bottom:16px"><label>Cible</label><input type="text" id="pm-target" /></div>
+    <div style="display:flex;gap:10px">
+      <button class="btn-admin" onclick="saveProduct()">💾 Enregistrer</button>
+      <button class="btn-outline" onclick="closeProdModal()">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<!-- CLIENT EDIT MODAL -->
+<div class="prod-modal-overlay" id="clientModal">
+  <div class="prod-modal">
+    <h3 style="font-size:18px;font-weight:800;color:var(--purple);margin-bottom:20px">✏️ Modifier le Contact</h3>
+    <input type="hidden" id="cm-idx" />
+    <div class="form-row">
+      <div class="form-group"><label>Nom</label><input type="text" id="cm-nom" /></div>
+      <div class="form-group"><label>Établissement</label><input type="text" id="cm-etab" /></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Téléphone</label><input type="text" id="cm-tel" /></div>
+      <div class="form-group"><label>Segment</label><select id="cm-seg"><option>Restauration Premium</option><option>Restauration Urbaine</option><option>Consommateurs Santé</option><option>Distribution Sélective</option></select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Statut</label><select id="cm-statut"><option>En prospection</option><option>Échantillon déposé</option><option>Client ponctuel</option><option>Abonné</option><option>Inactif</option></select></div>
+      <div class="form-group"><label>Note</label><input type="text" id="cm-note" /></div>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn-admin" onclick="saveClient()">💾 Enregistrer</button>
+      <button class="btn-outline" onclick="document.getElementById('clientModal').classList.remove('open')">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<!-- EXPORT OPTIONS MODAL -->
+<div class="prod-modal-overlay" id="export-options-modal">
+  <div class="prod-modal" style="max-width:440px">
+    <h3 style="font-size:18px;font-weight:800;color:var(--green-dark);margin-bottom:16px">📤 Options d'export</h3>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Sélectionnez les sections à inclure :</p>
+    <div style="margin-bottom:12px">
+      <div style="font-size:13px;font-weight:700;color:var(--green-mid);margin-bottom:8px">📄 PDF</div>
+      <label style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer;font-size:13px"><input type="checkbox" id="exp-pdf-kpi" checked style="accent-color:var(--green-mid);width:16px;height:16px" /> KPI & Graphiques</label>
+      <label style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer;font-size:13px"><input type="checkbox" id="exp-pdf-donnees" checked style="accent-color:var(--green-mid);width:16px;height:16px" /> Données Brutes</label>
+    </div>
+    <div style="margin-bottom:16px;padding-top:10px;border-top:1px solid var(--border)">
+      <div style="font-size:13px;font-weight:700;color:var(--green-mid);margin-bottom:8px">📊 CSV</div>
+      <label style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer;font-size:13px"><input type="checkbox" id="exp-csv-previsions" checked style="accent-color:var(--green-mid);width:16px;height:16px" /> Prévisions</label>
+      <label style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer;font-size:13px"><input type="checkbox" id="exp-csv-multi" style="accent-color:var(--green-mid);width:16px;height:16px" /> Multi-scénarios</label>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn-primary" onclick="doExportWithSelection()" style="flex:1">🚀 Exporter</button>
+      <button class="btn-outline" onclick="closeExportOptions()" style="flex:0">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<!-- EXPORT PROGRESS BAR (fixed position) -->
+<div id="exp-progress-container-fixed" style="display:none;position:fixed;top:80px;right:24px;z-index:999;background:var(--surface);border:1.5px solid var(--border);border-radius:12px;padding:16px 20px;width:320px;box-shadow:0 8px 32px rgba(0,0,0,0.15);animation:fadeIn 0.3s ease">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+    <span style="font-size:13px;font-weight:700;color:var(--green-dark)">📤 Export en cours</span>
+    <span id="exp-progress-pct-fixed" style="font-size:12px;font-weight:700;color:var(--green-mid)">0%</span>
+  </div>
+  <div class="progress-bar" style="height:8px;border-radius:6px;background:#e0e7e1">
+    <div id="exp-progress-fill-fixed" class="progress-fill" style="width:0%;height:100%;border-radius:6px;background:linear-gradient(90deg,var(--green-mid),var(--green-light));transition:width 0.4s ease"></div>
+  </div>
+  <div id="exp-progress-status-fixed" style="font-size:11px;color:var(--text-muted);margin-top:6px;font-weight:500">Préparation...</div>
+</div>
+
+<!-- MOBILE OVERLAY -->
+<div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+<button class="menu-btn" onclick="toggleSidebar()">☰</button>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <img src="icons/logo-biozar.png" alt="BIOZAR" style="width:40px;height:40px;object-fit:contain;margin-right:10px">
+    <div class="sidebar-logo-text">
+      <h1>BIOZAR</h1>
+      <p>Bio de Madagascar</p>
+    </div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">Principal</div>
+    <div class="nav-item active" id="nav-dashboard" onclick="showPage('dashboard')"><span class="icon">📊</span> Tableau de Bord</div>
+    <div class="nav-item hide-production hide-commercial" id="nav-finances" onclick="showPage('finances')"><span class="icon">💰</span> Finances</div>
+    <div class="nav-item hide-commercial" id="nav-production" onclick="showPage('production')"><span class="icon">🌱</span> Production</div>
+    <div class="nav-section-label">Gestion</div>
+    <div class="nav-item hide-production" id="nav-clients" onclick="showPage('clients')"><span class="icon">👥</span> Clients</div>
+    <div class="nav-item hide-production" id="nav-produits" onclick="showPage('produits')"><span class="icon">🥦</span> Produits</div>
+    <div class="nav-item hide-production" id="nav-marketing" onclick="showPage('marketing')"><span class="icon">📣</span> Marketing</div>
+    <div class="nav-item hide-production hide-commercial" id="nav-reporting" onclick="showPage('reporting')"><span class="icon">📈</span> Reporting</div>
+    <div class="nav-section-label">Stratégie</div>
+    <div class="nav-item hide-production hide-commercial" id="nav-risques" onclick="showPage('risques')"><span class="icon">⚠️</span> Risques</div>
+    <div class="nav-item hide-production hide-commercial" id="nav-bmc" onclick="showPage('bmc')"><span class="icon">🗺️</span> Business Model</div>
+    <div class="nav-section-label requires-admin">Administration</div>
+    <div class="nav-item requires-admin" id="nav-admin" onclick="showPage('admin')"><span class="icon">⚙️</span> Admin</div>
+  </nav>
+  <div class="sidebar-footer">
+    <button class="btn-outline" style="width:100%;border-color:var(--red);color:var(--red);font-weight:700" onclick="logout()">🚪 Déconnexion (<span id="currentUserLabel"></span>)</button>
+    <div class="sidebar-copy">BIOZAR © 2026</div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-title">Console de Pilotage <span>BIOZAR</span></div>
+    <div class="topbar-right">
+      <div class="topbar-date" id="topbar-date"></div>
+      <div class="topbar-badge">🌿 100% Bio</div>
+      <button id="notif-badge" onclick="requestNotifPermission()" style="background:var(--green-pale);color:var(--green-mid);border:none;border-radius:20px;padding:6px 14px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px">🔔</button>
+    </div>
+  </div>
+  <div class="content" id="mainContent">
+
+    <!-- DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <div class="stat-banner">
+        <div class="stat-banner-text">
+          <h2>Bienvenue sur BIOZAR 🌿</h2>
+          <p>Fraîcheur du bazar, Le bio est la star · Diana, Madagascar</p>
+        </div>
+        <div class="stat-banner-numbers hide-production hide-commercial">
+          <div class="stat-num"><div class="val">4</div><div class="lbl">Segments clients</div></div>
+          <div class="stat-num"><div class="val" id="banner-marge">200%</div><div class="lbl">Marge brute moy.</div></div>
+          <div class="stat-num"><div class="val" id="banner-prods">4</div><div class="lbl">Produits phares</div></div>
+        </div>
+      </div>
+      <div class="kpi-grid">
+        <div class="kpi-card green hide-production hide-commercial"><div class="kpi-icon">💰</div><div class="kpi-value" id="kpi-revenus">0 Ar</div><div class="kpi-label">Revenus du mois</div><div class="kpi-sub up">À renseigner</div></div>
+        <div class="kpi-card gold hide-production hide-commercial"><div class="kpi-icon">📦</div><div class="kpi-value" id="kpi-charges">— Ar</div><div class="kpi-label">Charges mensuelles</div><div class="kpi-sub neutral">Coûts fixes + variables</div></div>
+        <div class="kpi-card blue hide-production"><div class="kpi-icon">👥</div><div class="kpi-value" id="kpi-clients">0</div><div class="kpi-label">Clients actifs</div><div class="kpi-sub up">Ajoutez vos clients</div></div>
+        <div class="kpi-card red hide-production hide-commercial"><div class="kpi-icon">⚖️</div><div class="kpi-value" id="kpi-solde">—</div><div class="kpi-label">Solde du mois</div><div class="kpi-sub neutral">Renseignez les revenus</div></div>
+      </div>
+      <div class="two-col">
+        <div class="card hide-production hide-commercial"><div class="card-header"><div><h3>Trésorerie Prévisionnelle</h3><p>Juin → Novembre 2026</p></div></div><div class="card-body"><div class="chart-wrap"><canvas id="chartTresorerie"></canvas></div></div></div>
+        <div class="card hide-production"><div class="card-header"><div><h3>Segments Clients</h3><p>Répartition cibles</p></div></div><div class="card-body"><div class="chart-wrap"><canvas id="chartClients"></canvas></div></div></div>
+      </div>
+      <div class="card hide-commercial">
+        <div class="card-header"><div><h3>Avancement Production</h3><p>Phases opérationnelles</p></div></div>
+        <div class="card-body" id="progressBars"></div>
+      </div>
+    </div>
+
+    <!-- FINANCES -->
+    <div class="page" id="page-finances">
+      <div class="section-header"><h2>💰 Gestion Financière</h2><p>Coûts, marges, et suivi de trésorerie mensuel</p></div>
+      <div class="kpi-grid" id="charges-kpi"></div>
+      <div class="two-col">
+        <div class="card"><div class="card-header"><div><h3>Répartition des Charges</h3></div></div><div class="card-body"><div class="chart-wrap"><canvas id="chartCharges"></canvas></div></div></div>
+        <div class="card"><div class="card-header"><div><h3>Marges par Produit</h3></div></div><div class="card-body"><div class="chart-wrap"><canvas id="chartMarges"></canvas></div></div></div>
+      </div>
+      <div class="card"><div class="card-header"><div><h3>Suivi de Trésorerie</h3></div></div><div class="card-body"><table class="data-table"><thead><tr><th>Mois</th><th>Entrées (Ar)</th><th>Sorties (Ar)</th><th>Solde</th><th>Cumul</th></tr></thead><tbody id="tresorerie-body"></tbody></table></div></div>
+    </div>
+
+    <!-- PRODUCTION -->
+    <div class="page" id="page-production">
+      <div class="section-header"><h2>🌱 Suivi de Production</h2><p>Calendrier et plan opérationnel</p></div>
+      <div class="three-col">
+        <div class="card"><div class="card-header"><div><h3>Calendrier de Production</h3><p>Phases clés</p></div></div><div class="card-body"><div class="timeline" id="production-timeline"></div></div></div>
+        <div class="card"><div class="card-header"><div><h3>Saisir Production</h3></div></div><div class="card-body">
+          <div id="prod-alert-banner" style="display:none;background:var(--red-light);border:1px solid #ffcdd2;border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:13px;font-weight:600;color:var(--red)"></div>
+          <div class="form-group" style="margin-bottom:10px"><label>Produit</label><input type="text" id="prod-name" placeholder="Tomate Grade A" /></div>
+          <div class="form-row"><div class="form-group"><label>Quantité (kg)</label><input type="number" id="prod-qty" /></div><div class="form-group"><label>Date</label><input type="date" id="prod-date" /></div></div>
+          <button class="btn-primary" style="width:100%;margin-top:12px" onclick="addProduction()">+ Enregistrer</button>
+        </div></div>
+      </div>
+      <div class="three-col-equal">
+        <div class="card"><div class="card-header"><div><h3>📋 Checklist</h3></div></div><div class="card-body"><div id="checklist-tasks-list"></div></div></div>
+        <div class="card"><div class="card-header"><div><h3>📦 Stock Intrants</h3></div></div><div class="card-body"><table class="data-table"><thead><tr><th>Intrant</th><th>Statut</th></tr></thead><tbody id="intrants-list-body"></tbody></table></div></div>
+        <div class="card"><div class="card-header"><div><h3>🚨 Incidents</h3></div></div><div class="card-body">
+          <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:end"><div class="form-group" style="flex:1"><label>Type</label><select id="inc-type"><option>💧 Irrigation</option><option>🦟 Nuisibles</option><option>🌡️ Chaleur</option><option>☀️ Panne Solaire</option></select></div><div class="form-group" style="flex:2"><label>Description</label><input type="text" id="inc-desc" /></div><button class="btn-primary" onclick="reportIncident()">⚠️</button></div>
+          <div id="incidents-list-body" style="max-height:150px;overflow-y:auto"></div>
+        </div></div>
+      </div>
+      <div class="card" id="yield-stats-card"><div class="card-header"><div><h3>📊 Rendement</h3></div><div><span class="badge badge-green" id="yield-total-badge">Total: 0 kg</span></div></div><div class="card-body"><div class="chart-wrap"><canvas id="chartRendement"></canvas></div></div></div>
+      <div class="card"><div class="card-header"><div><h3>Journal de Production</h3></div></div><div class="card-body"><table class="data-table"><thead><tr><th>Date</th><th>Produit</th><th>Quantité (kg)</th><th>Valeur (Ar)</th></tr></thead><tbody id="production-log"></tbody></table><div class="empty" id="prod-empty"><div class="empty-icon">🌱</div><p>Aucune récolte.</p></div></div></div>
+    </div>
+
+    <!-- CLIENTS -->
+    <div class="page" id="page-clients">
+      <div class="section-header"><h2>👥 Clients & Prospects</h2></div>
+      <div style="display:flex;gap:8px;margin-bottom:20px;border-bottom:1px solid var(--border);padding-bottom:8px">
+        <button class="tab-btn active" onclick="switchCrmTab('contacts')">📋 Contacts</button>
+        <button class="tab-btn" onclick="switchCrmTab('pipeline')">📈 Pipeline</button>
+        <button class="tab-btn" onclick="switchCrmTab('campaigns')">🚀 Campagnes</button>
+      </div>
+      <div id="crm-contacts-section">
+        <div class="kpi-grid"><div class="kpi-card green"><div class="kpi-icon">🏨</div><div class="kpi-value">Hôtels</div><div class="kpi-label">Premium</div></div><div class="kpi-card blue"><div class="kpi-icon">🍽️</div><div class="kpi-value">Restaurants</div><div class="kpi-label">Urbain</div></div><div class="kpi-card gold"><div class="kpi-icon">🏠</div><div class="kpi-value">Particuliers</div><div class="kpi-label">Abonnés</div></div><div class="kpi-card red"><div class="kpi-icon">🛒</div><div class="kpi-value">Épiceries</div><div class="kpi-label">Distribution</div></div></div>
+        <div class="card"><div class="card-header"><div><h3>Ajouter un Contact</h3></div></div><div class="card-body">
+          <div class="form-row"><div class="form-group"><label>Nom</label><input type="text" id="c-nom" /></div><div class="form-group"><label>Établissement</label><input type="text" id="c-etab" /></div></div>
+          <div class="form-row"><div class="form-group"><label>Téléphone</label><input type="text" id="c-tel" /></div><div class="form-group"><label>Segment</label><select id="c-seg"><option>Restauration Premium</option><option>Restauration Urbaine</option><option>Consommateurs Santé</option><option>Distribution Sélective</option></select></div></div>
+          <div class="form-row"><div class="form-group"><label>Statut</label><select id="c-statut"><option>En prospection</option><option>Échantillon déposé</option><option>Client ponctuel</option><option>Abonné</option><option>Inactif</option></select></div><div class="form-group"><label>Note</label><input type="text" id="c-note" /></div></div>
+          <button class="btn-primary" onclick="addClient()">+ Ajouter</button>
+        </div></div>
+        <div class="card"><div class="card-header"><div><h3>Liste des Contacts</h3><p id="clients-count"></p></div></div><div class="card-body" style="padding:0"><table class="data-table"><thead><tr><th>Nom</th><th>Établissement</th><th>Tél.</th><th>Segment</th><th>Statut</th><th>Actions</th></tr></thead><tbody id="clients-body"></tbody></table><div class="empty" id="clients-empty"><div class="empty-icon">👥</div><p>Aucun contact.</p></div></div></div>
+      </div>
+      <div id="crm-pipeline-section" style="display:none"><div class="card"><div class="card-header"><div><h3>📈 Pipeline</h3></div></div><div class="card-body"><div id="crm-kanban-board" style="display:flex;gap:14px;min-width:1000px"></div></div></div></div>
+      <div id="crm-campaigns-section" style="display:none"><div class="two-col"><div class="card"><div class="card-header"><div><h3>🚀 Lancer une Campagne</h3></div></div><div class="card-body">
+        <div class="form-group"><label>Message</label><textarea id="camp-text" rows="4" style="width:100%;padding:8px;border-radius:6px;border:1.5px solid var(--border)"></textarea></div>
+        <button class="btn-primary" onclick="simulateMarketingCampaign()" style="width:100%">🔥 Simuler l'envoi</button>
+      </div></div><div class="card"><div class="card-header"><div><h3>📊 Suivi</h3></div></div><div class="card-body" id="camp-logs-list"><div class="empty"><p>Aucune campagne.</p></div></div></div></div></div>
+    </div>
+
+    <!-- PRODUITS -->
+    <div class="page" id="page-produits">
+      <div class="section-header"><h2>🥦 Produits & Prix</h2></div>
+      <div class="product-grid" id="products-grid" style="margin-bottom:24px"></div>
+      <div class="card"><div class="card-header"><div><h3>Arguments de Vente</h3></div></div><div class="card-body"><table class="data-table"><thead><tr><th>Segment</th><th>Argument</th><th>Canal</th></tr></thead><tbody><tr><td>🏨 Hôtels</td><td>Approvisionnement garanti hors saison</td><td>Visite directe</td></tr><tr><td>🍽️ Restaurants</td><td>Prix stables contrat annuel</td><td>Rencontre chefs</td></tr><tr><td>🏠 Particuliers</td><td>Panier livré à domicile</td><td>Facebook / WhatsApp</td></tr></tbody></table></div></div>
+      <div class="card"><div class="card-header"><div><h3>💸 Simulateur de Marges</h3></div></div><div class="card-body" id="simulateur-body"></div></div>
+    </div>
+
+    <!-- MARKETING -->
+    <div class="page" id="page-marketing">
+      <div class="section-header"><h2>📣 Marketing & Lancement</h2></div>
+      <div class="card"><div class="card-header"><div><h3>Calendrier de Lancement</h3></div></div><div class="card-body"><div class="week-cards"><div class="week-card"><div class="week-num">S1</div><div class="week-theme">🎬 Le Secret de BIOZAR</div><div class="week-goal">Vidéo coulisses ferme</div></div><div class="week-card"><div class="week-num">S2</div><div class="week-theme">🥗 Santé dans l'Assiette</div><div class="week-goal">Comparaison BIOZAR vs Marché</div></div><div class="week-card"><div class="week-num">S3</div><div class="week-theme">🧺 Lancement Paniers</div><div class="week-goal">Système d'abonnement</div></div><div class="week-card"><div class="week-num">S4</div><div class="week-theme">⭐ Livraison & Avis</div><div class="week-goal">Témoignages clients</div></div></div></div></div>
+    </div>
+
+    <!-- RISQUES -->
+    <div class="page" id="page-risques">
+      <div class="section-header"><h2>⚠️ Matrice des Risques</h2></div>
+      <div class="two-col"><div><h3 style="font-size:14px;font-weight:700;color:var(--red);margin-bottom:12px">🔴 Élevés</h3><div class="risk-item high"><div class="risk-title">💧 Sécheresse</div><div class="risk-solution">Cuves + goutte-à-goutte</div></div><div class="risk-item high"><div class="risk-title">🦟 Nuisibles</div><div class="risk-solution">Biopesticides + rotation</div></div><h3 style="font-size:14px;font-weight:700;color:var(--gold);margin:20px 0 12px">🟡 Moyens</h3><div class="risk-item medium"><div class="risk-title">🌧️ Pluies hors saison</div><div class="risk-solution">Serres tunnels</div></div></div><div class="card"><div class="card-header"><div><h3>Radar des Risques</h3></div></div><div class="card-body"><div class="chart-wrap"><canvas id="chartRisques"></canvas></div></div></div></div>
+    </div>
+
+    <!-- BMC -->
+    <div class="page" id="page-bmc">
+      <div class="section-header"><h2>🗺️ Business Model Canvas</h2></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px">
+        <div class="card"><div class="card-header" style="background:var(--green-pale)"><h3>🤝 Partenaires</h3></div><div class="card-body"><ul style="font-size:13px;line-height:2.2;padding-left:16px"><li>Fournisseurs bio</li><li>Collectifs agriculteurs</li></ul></div></div>
+        <div class="card"><div class="card-header" style="background:var(--green-pale)"><h3>⚙️ Activités</h3></div><div class="card-body"><ul style="font-size:13px;line-height:2.2;padding-left:16px"><li>Production maraîchère bio</li><li>Gestion de l'eau</li></ul></div></div>
+        <div class="card" style="border-top:3px solid var(--green-light)"><div class="card-header" style="background:linear-gradient(135deg,var(--green-pale),#f1f8e9)"><h3>💎 Valeur</h3></div><div class="card-body"><ul style="font-size:13px;line-height:2.2;padding-left:16px"><li>Légumes bio contre-saison</li><li>Zéro pesticide</li></ul></div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px">
+        <div class="card"><div class="card-header" style="background:var(--blue-light)"><h3>🔑 Ressources</h3></div><div class="card-body"><ul style="font-size:13px;line-height:2.2;padding-left:16px"><li>Terres et serres</li><li>Marque BIOZAR</li></ul></div></div>
+        <div class="card"><div class="card-header" style="background:var(--blue-light)"><h3>💬 Relations</h3></div><div class="card-body"><ul style="font-size:13px;line-height:2.2;padding-left:16px"><li>Abonnements</li><li>Transparence</li></ul></div></div>
+        <div class="card"><div class="card-header" style="background:var(--blue-light)"><h3>📡 Canaux</h3></div><div class="card-body"><ul style="font-size:13px;line-height:2.2;padding-left:16px"><li>Vente directe</li><li>Réseaux sociaux</li></ul></div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="card"><div class="card-header" style="background:var(--red-light)"><h3>💸 Coûts</h3></div><div class="card-body"><ul style="font-size:13px;line-height:2.2;padding-left:16px"><li>Infrastructures</li><li>Main-d'œuvre</li></ul></div></div>
+        <div class="card"><div class="card-header" style="background:var(--gold-light)"><h3>💰 Revenus</h3></div><div class="card-body"><ul style="font-size:13px;line-height:2.2;padding-left:16px"><li>Vente légumes</li><li>Abonnements paniers</li></ul></div></div>
+      </div>
+    </div>
+
+    <!-- REPORTING -->
+    <div class="page" id="page-reporting">
+      <div class="section-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
+        <div><h2>📈 Reporting Avancé</h2><p>Analyses de tendances</p></div>
+        <div style="display:flex;gap:8px">
+          <button id="btn-export-pdf" class="btn-primary" onclick="exportReportingPDF()" style="padding:10px 18px;font-size:13px;white-space:nowrap">📥 PDF</button>
+          <button id="btn-export-combo" class="btn-admin" onclick="exportCombinedReport()" style="padding:10px 18px;font-size:13px;white-space:nowrap">📦 PDF + CSV</button>
+        </div>
+      </div>
+
+      <div class="kpi-grid" id="reporting-kpis">
+        <div class="kpi-card green"><div class="kpi-icon">🌱</div><div class="kpi-value" id="rpt-total-prod">0 kg</div><div class="kpi-label">Production totale</div><div class="kpi-sub up" id="rpt-prod-trend">Calcul...</div></div>
+        <div class="kpi-card blue"><div class="kpi-icon">💰</div><div class="kpi-value" id="rpt-total-sales">0 Ar</div><div class="kpi-label">CA total</div><div class="kpi-sub up" id="rpt-sales-trend">Calcul...</div></div>
+        <div class="kpi-card gold"><div class="kpi-icon">📆</div><div class="kpi-value" id="rpt-avg-monthly">0 kg</div><div class="kpi-label">Moy. mensuelle</div><div class="kpi-sub neutral">Tous les mois</div></div>
+        <div class="kpi-card purple"><div class="kpi-icon">🏆</div><div class="kpi-value" id="rpt-top-product">—</div><div class="kpi-label">Top produit</div><div class="kpi-sub neutral">Par volume</div></div>
+      </div>
+
+      <div class="two-col">
+        <div class="card"><div class="card-header"><div><h3>📈 Tendance Production</h3></div><div class="form-group" style="width:120px;margin:0"><select id="rpt-prod-interval" onchange="renderProductionTrend()" style="padding:4px 8px;border-radius:6px;border:1.5px solid var(--border);font-size:11px;font-weight:600"><option value="day">Par jour</option><option value="week" selected>Par semaine</option><option value="month">Par mois</option></select></div></div><div class="card-body"><canvas id="chartProdTrend" style="height:260px"></canvas></div></div>
+        <div class="card"><div class="card-header"><div><h3>💰 Tendance Ventes</h3></div><div class="form-group" style="width:120px;margin:0"><select id="rpt-sales-interval" onchange="renderSalesTrend()" style="padding:4px 8px"><option value="day">Par jour</option><option value="week" selected>Par semaine</option><option value="month">Par mois</option></select></div></div><div class="card-body"><canvas id="chartSalesTrend" style="height:260px"></canvas></div></div>
+      </div>
+
+      <div class="two-col">
+        <div class="card"><div class="card-header"><div><h3>📊 Comparaison Mensuelle</h3></div></div><div class="card-body"><canvas id="chartMonthlyComp" style="height:260px"></canvas></div></div>
+        <div class="card"><div class="card-header"><div><h3>🏆 Performance Produits</h3></div></div><div class="card-body"><canvas id="chartTopProducts" style="height:260px"></canvas></div></div>
+      </div>
+
+      <div class="card"><div class="card-header"><div><h3>📋 Données Brutes</h3></div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><input type="date" id="rpt-from" style="padding:4px 8px;border-radius:6px;border:1.5px solid var(--border);font-size:11px" /><span style="font-size:11px">→</span><input type="date" id="rpt-to" style="padding:4px 8px;border-radius:6px;border:1.5px solid var(--border);font-size:11px" /><button class="btn-outline" style="padding:4px 12px;font-size:11px" onclick="renderReportingDataTable()">Filtrer</button></div></div><div class="card-body" style="padding:0;max-height:400px;overflow-y:auto"><table class="data-table"><thead><tr><th>Date</th><th>Produit</th><th>Type</th><th>Quantité</th><th>Valeur (Ar)</th></tr></thead><tbody id="rpt-data-body"></tbody></table><div class="empty" id="rpt-data-empty" style="padding:20px"><p>Aucune donnée.</p></div></div></div>
+
+      <!-- FORECAST -->
+      <div class="card"><div class="card-header"><div><h3>🔮 Prévisions de Récolte</h3><p>Régression linéaire</p></div><div class="form-group" style="width:140px;margin:0"><select id="forecast-weeks" onchange="renderProductionForecast()" style="padding:4px 8px;border-radius:6px;border:1.5px solid var(--border);font-size:11px;font-weight:600"><option value="4">4 sem.</option><option value="8" selected>8 sem.</option><option value="12">12 sem.</option></select></div></div><div class="card-body">
+        <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr)" id="forecast-kpis">
+          <div class="kpi-card green" style="padding:16px"><div class="kpi-icon" style="width:36px;height:36px;font-size:16px;margin-bottom:8px">📈</div><div class="kpi-value" id="fcast-total" style="font-size:20px">0 kg</div><div class="kpi-label" style="font-size:11px">Prévu</div></div>
+          <div class="kpi-card blue" style="padding:16px"><div class="kpi-icon" style="width:36px;height:36px;font-size:16px;margin-bottom:8px">📊</div><div class="kpi-value" id="fcast-weekly-avg" style="font-size:20px">0 kg</div><div class="kpi-label" style="font-size:11px">Moy. hebdo</div></div>
+          <div class="kpi-card gold" style="padding:16px"><div class="kpi-icon" style="width:36px;height:36px;font-size:16px;margin-bottom:8px">🎯</div><div class="kpi-value" id="fcast-trend" style="font-size:20px">—</div><div class="kpi-label" style="font-size:11px">Tendance</div></div>
+          <div class="kpi-card purple" style="padding:16px"><div class="kpi-icon" style="width:36px;height:36px;font-size:16px;margin-bottom:8px">💭</div><div class="kpi-value" id="fcast-r2" style="font-size:20px">—</div><div class="kpi-label" style="font-size:11px">Fiabilité R²</div></div>
+        </div>
+        <div class="chart-wrap" style="height:260px"><canvas id="chartForecast"></canvas><div id="forecast-empty" class="empty" style="display:none;position:absolute;inset:0;background:var(--surface)"><p>Pas assez de données.</p></div></div>
+      </div></div>
+
+      <!-- SEASONAL ANALYSIS -->
+      <div class="card"><div class="card-header"><div><h3>🌦️ Analyse Saisonnière</h3></div><div class="form-group" style="width:120px;margin:0"><select id="seas-view-mode" onchange="renderSeasonalAnalysis()" style="padding:4px 8px;border-radius:6px;border:1.5px solid var(--border);font-size:11px"><option value="overview">Vue ensemble</option><option value="byyear">Par année</option></select></div></div><div class="card-body">
+        <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr)" id="seasonal-kpis">
+          <div class="kpi-card green" style="padding:16px"><div class="kpi-icon" style="width:36px;height:36px;font-size:16px">📈</div><div class="kpi-value" id="seas-max-month" style="font-size:18px">—</div><div class="kpi-label" style="font-size:10px">Mois + productif</div></div>
+          <div class="kpi-card gold" style="padding:16px"><div class="kpi-icon" style="width:36px;height:36px;font-size:16px">📊</div><div class="kpi-value" id="seas-peak-avg" style="font-size:18px">—</div><div class="kpi-label" style="font-size:10px">Pic moyen</div></div>
+          <div class="kpi-card blue" style="padding:16px"><div class="kpi-icon" style="width:36px;height:36px;font-size:16px">🔄</div><div class="kpi-value" id="seas-nb-cycles" style="font-size:18px">0</div><div class="kpi-label" style="font-size:10px">Cycles</div></div>
+          <div class="kpi-card purple" style="padding:16px"><div class="kpi-icon" style="width:36px;height:36px;font-size:16px">🎯</div><div class="kpi-value" id="seas-variability" style="font-size:18px">—</div><div class="kpi-label" style="font-size:10px">Variabilité</div></div>
+        </div>
+        <div class="two-col" style="margin-bottom:0"><div style="position:relative;min-height:250px"><canvas id="chartSeasonal" style="height:250px"></canvas></div><div style="max-height:250px;overflow-y:auto;border:1px solid var(--border);border-radius:10px"><table class="data-table"><thead><tr><th>Mois</th><th>Moy</th><th>Min</th><th>Max</th><th>Cycles</th></tr></thead><tbody id="seas-table-body"></tbody></table></div></div>
+      </div></div>
+
+      <!-- SCENARIO SIMULATOR -->
+      <div class="card"><div class="card-header"><div><h3>🔮 Simulateur de Scénarios</h3><p>Impact d'une augmentation</p></div><button class="btn-outline" onclick="exportForecastCSV()" style="padding:6px 14px;font-size:12px">📥 CSV</button></div><div class="card-body">
+        <div class="form-row" style="grid-template-columns:1fr 1fr 1fr">
+          <div class="form-group"><label>Boost (×) <span id="sim-multiplier-val" style="font-weight:700;color:var(--green-mid)">1.5x</span></label><input type="range" id="sim-multiplier" min="0.5" max="3.0" step="0.1" value="1.5" style="width:100%;accent-color:var(--green-mid)" oninput="updateSimLabel()" /></div>
+          <div class="form-group"><label>kg supp. / semaine</label><input type="number" id="sim-extra-kg" value="0" min="0" step="5" onchange="renderScenarioSimulator()" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-weight:600" /></div>
+          <div class="form-group"><label>Horizon (sem.)</label><select id="sim-weeks" onchange="renderScenarioSimulator()" style="padding:8px 12px;border-radius:8px;border:1.5px solid var(--border);font-size:13px"><option value="4">4</option><option value="8" selected>8</option><option value="12">12</option></select></div>
+        </div>
+        <div style="margin-bottom:12px"><div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px"><span style="font-size:12px;font-weight:700">📋 Scénarios</span><div style="display:flex;gap:6px"><button class="btn-outline" onclick="addScenario()" style="padding:4px 10px;font-size:11px">+ Ajouter</button><button class="btn-outline" onclick="exportMultiScenarioCSV()" style="padding:4px 10px;font-size:11px">📥 Multi CSV</button></div></div><div id="scenario-list"><div class="empty" id="scenario-empty" style="padding:8px;font-size:11px"><p>Aucun scénario sauvegardé.</p></div></div></div>
+        <div style="background:var(--bg);border-radius:10px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px"><label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;font-weight:600"><input type="checkbox" id="auto-export-enable" onchange="toggleAutoExport()" style="accent-color:var(--green-mid)" /> Export auto</label><select id="auto-export-interval" onchange="toggleAutoExport()" style="padding:4px 8px;border-radius:6px;border:1.5px solid var(--border);font-size:11px" disabled><option value="daily">Quotidien</option><option value="weekly" selected>Hebdo</option><option value="monthly">Mensuel</option></select><span id="auto-export-status" style="font-size:12px;color:var(--text-muted)">⚪ Inactif</span></div>
+        <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr)" id="simulator-kpis">
+          <div class="kpi-card green" style="padding:12px"><div class="kpi-icon" style="width:32px;height:32px;font-size:14px">📈</div><div class="kpi-value" id="sim-base-total" style="font-size:16px">0 kg</div><div class="kpi-label" style="font-size:10px">Base</div></div>
+          <div class="kpi-card gold" style="padding:12px"><div class="kpi-icon" style="width:32px;height:32px;font-size:14px">📈</div><div class="kpi-value" id="sim-scenario-total" style="font-size:16px">0 kg</div><div class="kpi-label" style="font-size:10px">Scénario</div></div>
+          <div class="kpi-card blue" style="padding:12px"><div class="kpi-icon" style="width:32px;height:32px;font-size:14px">💰</div><div class="kpi-value" id="sim-diff" style="font-size:16px">0 kg</div><div class="kpi-label" style="font-size:10px">Écart</div></div>
+          <div class="kpi-card purple" style="padding:12px"><div class="kpi-icon" style="width:32px;height:32px;font-size:14px">📈</div><div class="kpi-value" id="sim-pct" style="font-size:16px">+0%</div><div class="kpi-label" style="font-size:10px">Progression</div></div>
+        </div>
+        <div class="chart-wrap" style="height:260px"><canvas id="chartSimulator"></canvas><div id="sim-empty" class="empty" style="display:none;position:absolute;inset:0;background:var(--surface)"><p>Ajoutez des données.</p></div></div>
+      </div></div>
+    </div>
+
+    <!-- ADMIN PAGE -->
+    <div class="page" id="page-admin">
+      <div class="section-header"><h2>⚙️ Panneau Administrateur</h2><p>Modifiez tous les paramètres</p></div>
+      <div class="admin-tabs">
+        <div class="admin-tab active" onclick="showAdminTab('produits')">🥦 Produits</div>
+        <div class="admin-tab" onclick="showAdminTab('charges')">💸 Charges</div>
+        <div class="admin-tab" onclick="showAdminTab('password')">🔑 Mot de Passe</div>
+        <div class="admin-tab" onclick="showAdminTab('export')">📤 Export</div>
+        <div class="admin-tab" onclick="showAdminTab('reset')">⚠️ Réinitialisation</div>
+      </div>
+      <div class="admin-tab-content active" id="tab-produits"><div class="card"><div class="card-header"><div><h3>🥦 Produits</h3></div><button class="btn-admin" onclick="addNewProduct()">+ Nouveau</button></div><div class="card-body" id="admin-products-list"></div></div></div>
+      <div class="admin-tab-content" id="tab-charges"><div class="card"><div class="card-header"><div><h3>💸 Charges Mensuelles</h3></div></div><div class="card-body" id="admin-charges-list"></div></div></div>
+      <div class="admin-tab-content" id="tab-password"><div class="card"><div class="card-header"><div><h3>🔑 Mot de Passe</h3></div></div><div class="card-body"><div class="form-group"><label>Nouveau mot de passe</label><input type="password" id="new-password" /></div><button class="btn-admin" onclick="changePassword()">Changer</button></div></div></div>
+      <div class="admin-tab-content" id="tab-export"><div class="card"><div class="card-header"><div><h3>📤 Export / Import</h3></div></div><div class="card-body"><button class="export-btn" onclick="exportJSON()"><span class="export-icon">📥</span> Exporter toutes les données (JSON)</button><button class="export-btn" onclick="document.getElementById('importFile').click()"><span class="export-icon">📤</span> Importer des données (JSON)</button><input type="file" id="importFile" accept=".json" style="display:none" onchange="importJSON(event)" /></div></div></div>
+      <div class="admin-tab-content" id="tab-reset"><div class="card"><div class="card-header"><div><h3>⚠️ Réinitialisation</h3></div></div><div class="card-body"><div class="danger-zone"><h4>🗑️ Tout réinitialiser</h4><p>Cette action supprime toutes les données et ne peut pas être annulée.</p><button class="btn-danger" onclick="resetAllData()">🗑️ Réinitialiser toutes les données</button></div></div></div></div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<div class="toast-container" id="toasts"></div>
+
+<script>
+// ═══════════════════ STATE ═══════════════════
+let state = {
+  version: '1.0.1',
+  productions: [],
+  clients: [],
+  products: [
+    { emoji: '🍅', name: 'Tomate Grade A', price: 5000, cost: 1500, target: 'Restauration Premium' },
+    { emoji: '🥬', name: 'Salade Bio', price: 3000, cost: 800, target: 'Consommateurs Santé' },
+    { emoji: '🥒', name: 'Concombre', price: 3500, cost: 1000, target: 'Restauration Urbaine' },
+    { emoji: '🌿', name: 'Herbes Aromatiques', price: 2000, cost: 500, target: 'Distribution Sélective' }
+  ],
+  charges: { loyer: 800000, salaires: 2500000, eau: 300000, electricite: 200000, intrants: 400000, transport: 350000, marketing: 250000, autres: 150000 },
+  tresorerie: [],
+  user: null,
+  role: null,
+  password: 'biozar2026',
+  incidents: [],
+  intrants: [],
+  checklist: [],
+  seenIncidents: [],
+  scenarios: [],
+  autoExportConfig: { enabled: false, interval: 'weekly', lastExport: null },
+  prodThreshold: 80
+};
+
+// ═══════════════════ HELPERS ═══════════════════
+function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+function showToast(msg, type) {
+  const c = document.getElementById('toasts');
+  const t = document.createElement('div');
+  t.className = 'toast' + (type === 'error' ? ' error' : '');
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 3000);
+}
+function showNotif(title, type) {
+  if (Notification.permission === 'granted') {
+    new Notification('BIOZAR - ' + title, { icon: '/manifest.json' });
+  }
+}
+function download(filename, content, mime) {
+  const blob = new Blob([content], { type: mime || 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('overlay').classList.toggle('open'); }
+function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('overlay').classList.remove('open'); }
+
+// ═══════════════════ PERSISTENCE ═══════════════════
+function saveState() {
+  try {
+    const s = JSON.parse(JSON.stringify(state));
+    delete s.user; delete s.role; delete s.password;
+    localStorage.setItem('biozar_state', JSON.stringify(s));
+    if (window.BIOZAR_FIREBASE?.saveStateToFirestore) {
+      window.BIOZAR_FIREBASE.saveStateToFirestore(s);
+    }
+  } catch(e) {}
+}
+async function loadState() {
+  try {
+    const saved = localStorage.getItem('biozar_state');
+    if (saved) {
+      const s = JSON.parse(saved);
+      Object.assign(state, s);
+    }
+    if (window.BIOZAR_FIREBASE?.loadStateFromFirestore) {
+      const remote = await window.BIOZAR_FIREBASE.loadStateFromFirestore();
+      if (remote && remote.state) {
+        Object.assign(state, remote.state);
+        if (typeof renderAll === 'function') renderAll();
+      }
+    }
+  } catch(e) {}
+  const stored = localStorage.getItem('biozar_password');
+  if (stored) state.password = stored;
+  const seen = localStorage.getItem('biozar_seen_incidents');
+  if (seen) state.seenIncidents = JSON.parse(seen);
+  const sc = localStorage.getItem('biozar_scenarios');
+  if (sc) state.scenarios = JSON.parse(sc);
+  const ae = localStorage.getItem('biozar_auto_export');
+  if (ae) state.autoExportConfig = JSON.parse(ae);
+}
+
+// ═══════════════════ LOGIN ═══════════════════
+function checkLogin() {
+  const u = document.getElementById('loginUsername').value.trim().toLowerCase();
+  const p = document.getElementById('loginPassword').value;
+  const error = document.getElementById('loginError');
+  if (!u || !p) { error.classList.add('show'); return; }
+  if (p !== state.password) { error.classList.add('show'); return; }
+  error.classList.remove('show');
+  state.user = u;
+  if (u === 'admin' || u === 'jean') state.role = 'admin';
+  else if (u === 'commercial' || u === 'pascal') state.role = 'commercial';
+  else state.role = 'production';
+  document.getElementById('loginModal').classList.remove('open');
+  document.getElementById('currentUserLabel').textContent = state.user;
+  document.body.classList.remove('locked');
+  document.body.className = 'role-' + state.role;
+  document.querySelectorAll('.requires-admin').forEach(e => e.style.display = state.role === 'admin' ? 'block' : 'none');
+  renderAll();
+  updateDate();
+  initCharts();
+  loadAutoExportConfig();
+  showToast('Bienvenue ' + state.user + ' !');
+}
+
+function updateDate() {
+  document.getElementById('topbar-date').textContent = new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+function logout() {
+  state.user = null; state.role = null;
+  document.getElementById('loginModal').classList.add('open');
+  document.getElementById('loginPassword').value = '';
+  document.body.classList.add('locked');
+  document.body.classList.remove('role-admin', 'role-commercial', 'role-production');
+  document.getElementById('currentUserLabel').textContent = '';
+}
+
+// ═══════════════════ PAGE NAV ═══════════════════
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const page = document.getElementById('page-' + name);
+  if (page) page.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const nav = document.getElementById('nav-' + name);
+  if (nav) nav.classList.add('active');
+  closeSidebar();
+  if (name === 'reporting') renderProductionForecast();
+}
+
+// ═══════════════════ DASHBOARD ═══════════════════
+function renderAll() {
+  renderProductionLog();
+  renderClients();
+  renderProducts();
+  renderCharges();
+  renderTresorerie();
+  renderProgressBars();
+  renderReportingTrends();
+  renderReportingDataTable();
+  renderForecastKPIs();
+  renderProductionForecast();
+  renderSeasonalAnalysis();
+  renderScenarioSimulator();
+  renderScenarioList();
+  renderAdminProducts();
+  renderAdminCharges();
+  renderYieldStats();
+  renderIncidents();
+  renderIntrants();
+  renderChecklist();
+  updateDashboardKPIs();
+}
+
+function updateDashboardKPIs() {
+  const total = state.productions.reduce((s, p) => s + (p.qty || 0), 0);
+  const totalAr = state.productions.reduce((s, p) => s + (p.value || 0), 0);
+  const p = state.products;
+  document.getElementById('kpi-revenus').textContent = totalAr.toLocaleString() + ' Ar';
+  document.getElementById('kpi-solde').textContent = (totalAr - Object.values(state.charges).reduce((a, b) => a + b, 0)).toLocaleString() + ' Ar';
+  document.getElementById('kpi-clients').textContent = state.clients.filter(c => c.statut === 'Abonné').length;
+}
+
+// ═══════════════════ PRODUCTION ═══════════════════
+function addProduction() {
+  const name = document.getElementById('prod-name').value.trim();
+  const qty = parseFloat(document.getElementById('prod-qty').value);
+  let date = document.getElementById('prod-date').value;
+  if (!name || !qty) { showToast('Remplissez le produit et la quantité.', 'error'); return; }
+  if (!date) date = new Date().toISOString().slice(0, 10);
+  const p = state.products.find(p => p.name.toLowerCase() === name.toLowerCase());
+  const value = p ? qty * p.price : qty * 2000;
+  state.productions.push({ date, name, qty, value });
+  saveState();
+  document.getElementById('prod-name').value = '';
+  document.getElementById('prod-qty').value = '';
+  renderAll();
+  showToast(name + ' : ' + qty + ' kg enregistré !');
+  checkProdThreshold();
+}
+
+function renderProductionLog() {
+  const tbody = document.getElementById('production-log');
+  const empty = document.getElementById('prod-empty');
+  tbody.innerHTML = '';
+  const prods = [...state.productions].reverse().slice(0, 50);
+  if (prods.length === 0) { empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+  prods.forEach((p, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td>' + p.date + '</td><td>' + p.name + '</td><td>' + p.qty + ' kg</td><td class="hide-production">' + (p.value || 0).toLocaleString() + ' Ar</td>';
+    tbody.appendChild(tr);
+  });
+}
+
+function reportIncident() {
+  const type = document.getElementById('inc-type').value;
+  const desc = document.getElementById('inc-desc').value.trim() || type.replace(/^.{2}/, '');
+  state.incidents.push({ id: Date.now(), type, desc, date: new Date().toISOString().slice(0, 10), resolved: false, reportedBy: state.user });
+  saveState();
+  document.getElementById('inc-desc').value = '';
+  renderIncidents();
+  showToast('Incident signalé !');
+}
+
+function renderIncidents() {
+  const tbody = document.getElementById('incidents-list-body');
+  const empty = document.getElementById('incidents-empty');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  const active = state.incidents.filter(i => !i.resolved).slice(-10);
+  if (active.length === 0) { if (empty) empty.style.display = 'block'; return; }
+  if (empty) empty.style.display = 'none';
+  active.forEach(i => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td>' + (i.reportedBy || '—') + '</td><td>' + i.desc + '</td><td><span class="badge badge-red">Ouvert</span></td><td><button class="btn-danger" style="padding:2px 6px;font-size:10px" onclick="resolveIncident(' + i.id + ')">✔</button></td>';
+    tbody.appendChild(tr);
+  });
+}
+
+function resolveIncident(id) {
+  const i = state.incidents.find(x => x.id === id);
+  if (i) { i.resolved = true; saveState(); renderIncidents(); }
+}
+
+function renderYieldStats() {
+  const canvas = document.getElementById('chartRendement');
+  if (!canvas) return;
+  const grouped = {};
+  state.productions.forEach(p => { grouped[p.name] = (grouped[p.name] || 0) + p.qty; });
+  const labels = Object.keys(grouped);
+  const data = Object.values(grouped);
+  const total = data.reduce((a, b) => a + b, 0);
+  const badge = document.getElementById('yield-total-badge');
+  if (badge) badge.textContent = 'Total: ' + total + ' kg';
+  if (window._yieldChart) window._yieldChart.destroy();
+  if (labels.length === 0) return;
+  window._yieldChart = new Chart(canvas, {
+    type: 'bar',
+    data: { labels, datasets: [{ label: 'Kg', data, backgroundColor: 'rgba(76,175,80,0.6)', borderColor: '#2d6a35', borderWidth: 1 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+  });
+}
+
+function renderChecklist() {
+  const list = document.getElementById('checklist-tasks-list');
+  if (!list) return;
+  const tasks = [
+    { id: 1, label: 'Préparer les planches de culture', done: false },
+    { id: 2, label: 'Vérifier le système d\'irrigation', done: false },
+    { id: 3, label: 'Appliquer le compost', done: false },
+    { id: 4, label: 'Inspecter les plants', done: false }
+  ];
+  list.innerHTML = '';
+  const done = tasks.filter(t => t.done).length;
+  tasks.forEach(t => {
+    const div = document.createElement('div');
+    div.style.cssText = 'display:flex;align-items:center;gap:10px;padding:6px 0';
+    div.innerHTML = '<input type="checkbox" ' + (t.done ? 'checked' : '') + ' onchange="toggleChecklist(' + t.id + ')" style="accent-color:var(--green-mid)" /> <span style="font-size:13px">' + t.label + '</span>';
+    list.appendChild(div);
+  });
+}
+
+function renderIntrants() {
+  const tbody = document.getElementById('intrants-list-body');
+  if (!tbody) return;
+  const intrants = [
+    { name: 'Compost Bio', status: 'ok' },
+    { name: 'Biopesticide Neem', status: 'low' },
+    { name: 'Semences', status: 'ok' },
+    { name: 'Paillage', status: 'out' }
+  ];
+  tbody.innerHTML = '';
+  intrants.forEach(i => {
+    const badge = i.status === 'ok' ? 'badge-green' : i.status === 'low' ? 'badge-gold' : 'badge-red';
+    const label = i.status === 'ok' ? 'OK' : i.status === 'low' ? 'Faible' : 'Rupture';
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td>' + i.name + '</td><td><span class="badge ' + badge + '">' + label + '</span></td><td style="text-align:right"><button class="btn-edit" style="padding:2px 8px;font-size:10px">🔄</button></td>';
+    tbody.appendChild(tr);
+  });
+}
+
+function renderProgressBars() {
+  const container = document.getElementById('progressBars');
+  if (!container) return;
+  const phases = [
+    { name: 'Préparation du sol', pct: 80 },
+    { name: 'Mise en place irrigation', pct: 60 },
+    { name: 'Semis/Plantation', pct: 40 },
+    { name: 'Entretien & Récolte', pct: 20 }
+  ];
+  container.innerHTML = phases.map(p => '<div class="progress-row"><div class="progress-label"><span>' + p.name + '</span><span>' + p.pct + '%</span></div><div class="progress-bar"><div class="progress-fill" style="width:' + p.pct + '%"></div></div></div>').join('');
+}
+
+function checkProdThreshold() {
+  const threshold = state.prodThreshold || 80;
+  const weekly = state.productions.filter(p => {
+    const d = new Date(p.date);
+    const now = new Date();
+    return (now - d) < 7 * 24 * 60 * 60 * 1000;
+  }).reduce((s, p) => s + p.qty, 0);
+  if (weekly < threshold) {
+    const banner = document.getElementById('prod-alert-banner');
+    if (banner) { banner.textContent = '⚠️ Alerte : Production hebdo (' + weekly + ' kg) sous le seuil (' + threshold + ' kg)'; banner.style.display = 'block'; }
+  }
+}
+
+// ═══════════════════ CLIENTS ═══════════════════
+function addClient() {
+  const nom = document.getElementById('c-nom').value.trim();
+  if (!nom) { showToast('Entrez un nom.', 'error'); return; }
+  state.clients.push({
+    nom, etab: document.getElementById('c-etab').value.trim(),
+    tel: document.getElementById('c-tel').value.trim(),
+    seg: document.getElementById('c-seg').value,
+    statut: document.getElementById('c-statut').value,
+    note: document.getElementById('c-note').value.trim(),
+    added: new Date().toISOString().slice(0, 10)
+  });
+  saveState();
+  document.getElementById('c-nom').value = ''; document.getElementById('c-etab').value = ''; document.getElementById('c-tel').value = ''; document.getElementById('c-note').value = '';
+  renderClients();
+  showToast(nom + ' ajouté !');
+}
+
+function renderClients() {
+  const tbody = document.getElementById('clients-body');
+  const empty = document.getElementById('clients-empty');
+  const count = document.getElementById('clients-count');
+  tbody.innerHTML = '';
+  if (state.clients.length === 0) { empty.style.display = 'block'; if (count) count.textContent = '0 contact'; return; }
+  empty.style.display = 'none';
+  if (count) count.textContent = state.clients.length + ' contacts';
+  state.clients.forEach((c, i) => {
+    const badges = { 'En prospection': 'badge-gold', 'Échantillon déposé': 'badge-blue', 'Client ponctuel': 'badge-green', 'Abonné': 'badge-purple', 'Inactif': 'badge-gray' };
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td>' + c.nom + '</td><td>' + (c.etab || '—') + '</td><td>' + (c.tel || '—') + '</td><td>' + c.seg + '</td><td><span class="badge ' + (badges[c.statut] || 'badge-gray') + '">' + c.statut + '</span></td><td>' + (c.note || '') + '</td><td><button class="btn-edit" onclick="editClient(' + i + ')">✏️</button></td>';
+    tbody.appendChild(tr);
+  });
+}
+
+function editClient(idx) {
+  const c = state.clients[idx];
+  document.getElementById('cm-idx').value = idx;
+  document.getElementById('cm-nom').value = c.nom;
+  document.getElementById('cm-etab').value = c.etab || '';
+  document.getElementById('cm-tel').value = c.tel || '';
+  document.getElementById('cm-seg').value = c.seg;
+  document.getElementById('cm-statut').value = c.statut;
+  document.getElementById('cm-note').value = c.note || '';
+  document.getElementById('clientModal').classList.add('open');
+}
+
+function saveClient() {
+  const idx = parseInt(document.getElementById('cm-idx').value);
+  const c = state.clients[idx];
+  if (!c) return;
+  c.nom = document.getElementById('cm-nom').value.trim();
+  c.etab = document.getElementById('cm-etab').value.trim();
+  c.tel = document.getElementById('cm-tel').value.trim();
+  c.seg = document.getElementById('cm-seg').value;
+  c.statut = document.getElementById('cm-statut').value;
+  c.note = document.getElementById('cm-note').value.trim();
+  saveState();
+  document.getElementById('clientModal').classList.remove('open');
+  renderClients();
+  showToast('Contact mis à jour !');
+}
+
+function switchCrmTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('crm-tab-' + tab).classList.add('active');
+  ['contacts', 'pipeline', 'campaigns'].forEach(t => document.getElementById('crm-' + t + '-section').style.display = t === tab ? 'block' : 'none');
+  if (tab === 'pipeline') renderKanban();
+}
+
+function renderKanban() {
+  const board = document.getElementById('crm-kanban-board');
+  if (!board) return;
+  const cols = [
+    { title: '📋 En prospection', filter: 'En prospection' },
+    { title: '🎁 Échantillon déposé', filter: 'Échantillon déposé' },
+    { title: '🤝 Client ponctuel', filter: 'Client ponctuel' },
+    { title: '⭐ Abonné', filter: 'Abonné' }
+  ];
+  board.innerHTML = cols.map(col => {
+    const items = state.clients.filter(c => c.statut === col.filter);
+    return '<div class="kanban-col"><div class="kanban-col-header"><span class="kanban-col-title">' + col.title + '</span><span class="kanban-col-count">' + items.length + '</span></div>' + items.map(c => '<div class="kanban-card"><div class="kanban-card-title">' + c.nom + '</div><div class="kanban-card-etab">' + (c.etab || '') + '</div></div>').join('') + '</div>';
+  }).join('');
+}
+
+// ═══════════════════ PRODUCTS ═══════════════════
+function renderProducts() {
+  const grid = document.getElementById('products-grid');
+  if (!grid) return;
+  grid.innerHTML = state.products.map((p, i) => '<div class="product-card"><div class="product-emoji">' + p.emoji + '</div><div class="product-name">' + p.name + '</div><div class="product-price">' + p.price.toLocaleString() + ' Ar</div><div class="product-cost">Coût: ' + p.cost.toLocaleString() + ' Ar</div><div class="product-margin">+ ' + Math.round((p.price - p.cost) / p.cost * 100) + '%</div>' + (state.role === 'admin' ? '<button class="product-edit-btn" onclick="editProduct(' + i + ')">✏️</button>' : '') + '</div>').join('');
+}
+
+function editProduct(idx) {
+  const p = state.products[idx];
+  document.getElementById('pm-idx').value = idx;
+  document.getElementById('pm-emoji').value = p.emoji;
+  document.getElementById('pm-name').value = p.name;
+  document.getElementById('pm-price').value = p.price;
+  document.getElementById('pm-cost').value = p.cost;
+  document.getElementById('pm-target').value = p.target || '';
+  document.getElementById('prodModal').classList.add('open');
+}
+
+function saveProduct() {
+  const idx = parseInt(document.getElementById('pm-idx').value);
+  if (idx >= 0 && idx < state.products.length) {
+    state.products[idx] = {
+      emoji: document.getElementById('pm-emoji').value || '🍅',
+      name: document.getElementById('pm-name').value.trim() || 'Produit',
+      price: parseFloat(document.getElementById('pm-price').value) || 0,
+      cost: parseFloat(document.getElementById('pm-cost').value) || 0,
+      target: document.getElementById('pm-target').value.trim()
+    };
+  } else {
+    state.products.push({
+      emoji: document.getElementById('pm-emoji').value || '🍅',
+      name: document.getElementById('pm-name').value.trim() || 'Nouveau',
+      price: parseFloat(document.getElementById('pm-price').value) || 0,
+      cost: parseFloat(document.getElementById('pm-cost').value) || 0,
+      target: document.getElementById('pm-target').value.trim()
+    });
+  }
+  saveState();
+  document.getElementById('prodModal').classList.remove('open');
+  renderAll();
+}
+
+function closeProdModal() { document.getElementById('prodModal').classList.remove('open'); }
+function addNewProduct() { document.getElementById('pm-idx').value = -1; document.getElementById('pm-emoji').value = ''; document.getElementById('pm-name').value = ''; document.getElementById('pm-price').value = ''; document.getElementById('pm-cost').value = ''; document.getElementById('pm-target').value = ''; document.getElementById('prodModal').classList.add('open'); }
+
+// ═══════════════════ FINANCES ═══════════════════
+function renderCharges() {
+  const kpi = document.getElementById('charges-kpi');
+  if (!kpi) return;
+  const total = Object.values(state.charges).reduce((a, b) => a + b, 0);
+  kpi.innerHTML = '<div class="kpi-card red"><div class="kpi-icon">💸</div><div class="kpi-value">' + total.toLocaleString() + ' Ar</div><div class="kpi-label">Charges totales</div></div>';
+  renderChargesChart();
+}
+
+function renderChargesChart() {
+  const canvas = document.getElementById('chartCharges');
+  if (!canvas) return;
+  if (window._chargesChart) window._chargesChart.destroy();
+  const labels = Object.keys(state.charges);
+  const data = Object.values(state.charges);
+  const colors = ['#e53935','#f9a825','#1976d2','#7b1fa2','#4caf50','#ff6d00','#00bfa5','#78909c'];
+  window._chargesChart = new Chart(canvas, {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data, backgroundColor: colors }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { font: { size: 11 } } } } }
+  });
+}
+
+function renderTresorerie() {
+  const tbody = document.getElementById('tresorerie-body');
+  if (!tbody) return;
+  const months = ['Juin','Juillet','Août','Septembre','Octobre','Novembre'];
+  const entries = state.tresorerie || [];
+  const getVal = (m, type) => { const e = entries.find(x => x.mois === m); return e ? e[type] : 0; };
+  let cumul = 0;
+  tbody.innerHTML = months.map(m => {
+    const entree = getVal(m, 'entree') || 0;
+    const sortie = getVal(m, 'sortie') || 0;
+    const solde = entree - sortie;
+    cumul += solde;
+    return '<tr><td>' + m + '</td><td><input class="charge-input" type="number" value="' + entree + '" onchange="updateTreso(\'' + m + '\',\'entree\',this.value)" /></td><td><input class="charge-input" type="number" value="' + sortie + '" onchange="updateTreso(\'' + m + '\',\'sortie\',this.value)" /></td><td style="font-weight:700;color:' + (solde >= 0 ? 'var(--green-mid)' : 'var(--red)') + '">' + solde.toLocaleString() + '</td><td style="font-weight:700">' + cumul.toLocaleString() + '</td></tr>';
+  }).join('');
+}
+
+function updateTreso(mois, field, val) {
+  let e = state.tresorerie.find(x => x.mois === mois);
+  if (!e) { e = { mois, entree: 0, sortie: 0 }; state.tresorerie.push(e); }
+  e[field] = parseFloat(val) || 0;
+  saveState();
+  renderTresorerie();
+}
+
+// ═══════════════════ CRM MARKETING ═══════════════════
+function simulateMarketingCampaign() {
+  const msg = document.getElementById('camp-text').value.trim() || 'Découvrez nos produits BIOZAR !';
+  const logs = document.getElementById('camp-logs-list');
+  if (!logs) return;
+  const targets = state.clients.filter(c => c.statut !== 'Inactif' && c.tel);
+  if (targets.length === 0) { showToast('Aucun contact avec téléphone.', 'error'); return; }
+  logs.innerHTML = '';
+  targets.forEach((c, i) => {
+    setTimeout(() => {
+      const div = document.createElement('div');
+      div.style.cssText = 'padding:6px 10px;border-bottom:1px solid var(--border);font-size:12px;display:flex;gap:8px;align-items:center';
+      div.innerHTML = '<span style="color:var(--green-light)">✅</span> <strong>' + c.nom + '</strong> — ' + msg.slice(0, 50);
+      logs.appendChild(div);
+    }, i * 200);
+  });
+  setTimeout(() => showToast('Campagne envoyée à ' + targets.length + ' contacts !'), targets.length * 200 + 500);
+  showToast('Envoi en cours...');
+}
+
+// ═══════════════════ CHART INIT ═══════════════════
+function initCharts() {
+  renderChargesChart();
+  // Dashboard
+  const tCanvas = document.getElementById('chartTresorerie');
+  if (tCanvas) {
+    new Chart(tCanvas, {
+      type: 'line', data: { labels: ['Juin','Juillet','Août','Sept','Oct','Nov'], datasets: [{
+        label: 'Trésorerie', data: [500000, 1200000, 800000, 2000000, 1500000, 3000000],
+        borderColor: '#2d6a35', backgroundColor: 'rgba(45,106,53,0.1)', fill: true, tension: 0.4
+      }] }, options: { responsive: true, maintainAspectRatio: false }
+    });
+  }
+  const cCanvas = document.getElementById('chartClients');
+  if (cCanvas) {
+    new Chart(cCanvas, {
+      type: 'doughnut', data: { labels: ['Premium','Urbain','Santé','Distribution'], datasets: [{ data: [30, 25, 25, 20], backgroundColor: ['#2d6a35','#1976d2','#f9a825','#7b1fa2'] }] },
+      options: { responsive: true, maintainAspectRatio: false }
+    });
+  }
+  const ch = document.getElementById('chartCanaux');
+  if (ch) {
+    new Chart(ch, {
+      type: 'polarArea', data: { labels: ['Réseaux','Bouche-à-oreille','Visites','WhatsApp'], datasets: [{ data: [40, 25, 20, 15], backgroundColor: ['#4caf50','#f9a825','#1976d2','#7b1fa2'] }] },
+      options: { responsive: true, maintainAspectRatio: false }
+    });
+  }
+  const rCanvas = document.getElementById('chartRisques');
+  if (rCanvas) {
+    new Chart(rCanvas, {
+      type: 'radar', data: {
+        labels: ['Eau','Nuisibles','Chaleur','Pluies','Marché','Transport'],
+        datasets: [{ label: 'Niveau de risque', data: [90, 80, 75, 50, 40, 30], backgroundColor: 'rgba(229,57,53,0.2)', borderColor: '#e53935', pointBackgroundColor: '#e53935' }]
+      }, options: { responsive: true, maintainAspectRatio: false, scales: { r: { min: 0, max: 100 } } }
+    });
+  }
+  renderProductionTrend();
+  renderSalesTrend();
+  renderMonthlyComparison();
+  renderTopProducts();
+  renderForecastChart();
+}
+
+// ═══════════════════ REPORTING ═══════════════════
+function renderReportingTrends() {
+  renderProductionTrend();
+  renderSalesTrend();
+  renderMonthlyComparison();
+  renderTopProducts();
+  renderReportingDataTable();
+  renderProductionForecast();
+  renderSeasonalAnalysis();
+  renderScenarioSimulator();
+  renderScenarioList();
+}
+
+function renderProductionTrend() {
+  const canvas = document.getElementById('chartProdTrend');
+  if (!canvas) return;
+  if (window._prodTrend) window._prodTrend.destroy();
+  const interval = document.getElementById('rpt-prod-interval')?.value || 'week';
+  const grouped = {};
+  state.productions.forEach(p => {
+    const key = interval === 'day' ? p.date : interval === 'week' ? p.date.slice(0, 7) : p.date.slice(0, 7);
+    grouped[key] = (grouped[key] || 0) + p.qty;
+  });
+  const labels = Object.keys(grouped).sort();
+  const data = labels.map(l => grouped[l]);
+  if (labels.length === 0) return;
+  window._prodTrend = new Chart(canvas, {
+    type: 'line', data: { labels, datasets: [{ label: 'Production (kg)', data, borderColor: '#2d6a35', backgroundColor: 'rgba(45,106,53,0.1)', fill: true, tension: 0.3 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+  });
+}
+
+function renderSalesTrend() {
+  const canvas = document.getElementById('chartSalesTrend');
+  if (!canvas) return;
+  if (window._salesTrend) window._salesTrend.destroy();
+  const interval = document.getElementById('rpt-sales-interval')?.value || 'week';
+  const grouped = {};
+  state.productions.forEach(p => {
+    const key = interval === 'day' ? p.date : interval === 'week' ? p.date.slice(0, 7) : p.date.slice(0, 7);
+    grouped[key] = (grouped[key] || 0) + (p.value || 0);
+  });
+  const labels = Object.keys(grouped).sort();
+  const data = labels.map(l => grouped[l]);
+  if (labels.length === 0) return;
+  window._salesTrend = new Chart(canvas, {
+    type: 'line', data: { labels, datasets: [{ label: 'Ventes (Ar)', data, borderColor: '#1976d2', backgroundColor: 'rgba(25,118,210,0.1)', fill: true, tension: 0.3 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+  });
+}
+
+function renderMonthlyComparison() {
+  const canvas = document.getElementById('chartMonthlyComp');
+  if (!canvas) return;
+  if (window._monthlyComp) window._monthlyComp.destroy();
+  const prod = {}, ventes = {};
+  state.productions.forEach(p => {
+    const m = p.date.slice(0, 7);
+    prod[m] = (prod[m] || 0) + p.qty;
+    ventes[m] = (ventes[m] || 0) + (p.value || 0);
+  });
+  const labels = Object.keys(prod).sort();
+  if (labels.length === 0) return;
+  window._monthlyComp = new Chart(canvas, {
+    type: 'bar', data: {
+      labels, datasets: [
+        { label: 'Production (kg)', data: labels.map(l => prod[l]), backgroundColor: 'rgba(76,175,80,0.6)' },
+        { label: 'Ventes (Ar/1000)', data: labels.map(l => Math.round((ventes[l] || 0) / 1000)), backgroundColor: 'rgba(25,118,210,0.6)' }
+      ]
+    }, options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: false } } }
+  });
+}
+
+function renderTopProducts() {
+  const canvas = document.getElementById('chartTopProducts');
+  if (!canvas) return;
+  if (window._topProducts) window._topProducts.destroy();
+  const grouped = {};
+  state.productions.forEach(p => { grouped[p.name] = (grouped[p.name] || 0) + p.qty; });
+  const sorted = Object.entries(grouped).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  if (sorted.length === 0) return;
+  window._topProducts = new Chart(canvas, {
+    type: 'bar', data: { labels: sorted.map(s => s[0]), datasets: [{ label: 'Kg', data: sorted.map(s => s[1]), backgroundColor: 'rgba(76,175,80,0.6)' }] },
+    options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } } }
+  });
+}
+
+function renderReportingDataTable() {
+  const tbody = document.getElementById('rpt-data-body');
+  const empty = document.getElementById('rpt-data-empty');
+  if (!tbody) return;
+  const from = document.getElementById('rpt-from')?.value || '';
+  const to = document.getElementById('rpt-to')?.value || '';
+  let data = [...state.productions];
+  if (from) data = data.filter(p => p.date >= from);
+  if (to) data = data.filter(p => p.date <= to);
+  data = data.reverse().slice(0, 100);
+  tbody.innerHTML = '';
+  if (data.length === 0) { if (empty) empty.style.display = 'block'; return; }
+  if (empty) empty.style.display = 'none';
+  data.forEach(p => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td>' + p.date + '</td><td>' + p.name + '</td><td>Production</td><td>' + p.qty + ' kg</td><td>' + (p.value || 0).toLocaleString() + ' Ar</td>';
+    tbody.appendChild(tr);
+  });
+}
+
+function updateReportingKPIs() {
+  const total = state.productions.reduce((s, p) => s + p.qty, 0);
+  const totalAr = state.productions.reduce((s, p) => s + (p.value || 0), 0);
+  const months = {};
+  state.productions.forEach(p => { const m = p.date.slice(0, 7); months[m] = (months[m] || 0) + p.qty; });
+  const avg = Object.keys(months).length > 0 ? total / Object.keys(months).length : 0;
+  const grouped = {};
+  state.productions.forEach(p => { grouped[p.name] = (grouped[p.name] || 0) + p.qty; });
+  const top = Object.entries(grouped).sort((a, b) => b[1] - a[1])[0];
+  document.getElementById('rpt-total-prod').textContent = total + ' kg';
+  document.getElementById('rpt-total-sales').textContent = totalAr.toLocaleString() + ' Ar';
+  document.getElementById('rpt-avg-monthly').textContent = Math.round(avg) + ' kg';
+  document.getElementById('rpt-top-product').textContent = top ? top[0] : '—';
+}
+
+// ═══════════════════ FORECAST ═══════════════════
+function computeLinearRegression(data) {
+  const n = data.length;
+  if (n < 2) return null;
+  let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+  data.forEach((y, i) => { sumX += i; sumY += y; sumXY += i * y; sumX2 += i * i; });
+  const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+  const intercept = (sumY - slope * sumX) / n;
+  const yMean = sumY / n;
+  let ssRes = 0, ssTot = 0;
+  data.forEach((y, i) => { ssRes += (y - (slope * i + intercept)) ** 2; ssTot += (y - yMean) ** 2; });
+  const r2 = ssTot > 0 ? 1 - ssRes / ssTot : 0;
+  return { slope, intercept, r2 };
+}
+
+function generateForecast(weeksAhead) {
+  const prods = state.productions || [];
+  if (prods.length < 2) return null;
+  const weekly = {};
+  prods.forEach(p => {
+    const d = new Date(p.date);
+    const week = d.getFullYear() + '-W' + String(Math.ceil((d.getDate() + (new Date(d.getFullYear(), d.getMonth(), 1)).getDay()) / 7)).padStart(2, '0');
+    weekly[week] = (weekly[week] || 0) + p.qty;
+  });
+  const history = Object.entries(weekly).sort((a, b) => a[0].localeCompare(b[0]));
+  if (history.length < 2) return null;
+  const values = history.map(h => h[1]);
+  const reg = computeLinearRegression(values);
+  if (!reg) return null;
+  const forecast = [];
+  const lastWeek = history[history.length - 1][0];
+  for (let i = 0; i < weeksAhead; i++) {
+    const x = values.length + i;
+    const val = Math.max(0, reg.slope * x + reg.intercept);
+    forecast.push({ week: 'S+' + (i + 1), value: Math.round(val * 10) / 10 });
+  }
+  const total = forecast.reduce((s, f) => s + f.value, 0);
+  return { history: history.map(h => ({ week: h[0], value: h[1] })), forecast, total, trend: reg.slope > 0 ? '📈' : '📉', r2: reg.r2, slope: reg.slope, intercept: reg.intercept };
+}
+
+function renderProductionForecast() {
+  const weeks = parseInt(document.getElementById('forecast-weeks')?.value || '8');
+  const data = generateForecast(weeks);
+  const canvas = document.getElementById('chartForecast');
+  const empty = document.getElementById('forecast-empty');
+  if (!canvas) return;
+  if (!data) { empty.style.display = 'flex'; if (window._fcast) { window._fcast.destroy(); window._fcast = null; } return; }
+  empty.style.display = 'none';
+  if (window._fcast) window._fcast.destroy();
+  const labels = [...data.history.map(h => h.week), ...data.forecast.map(f => f.week)];
+  const histData = [...data.history.map(h => h.value), ...Array(data.forecast.length).fill(null)];
+  const fcastData = [...Array(data.history.length).fill(null), ...data.forecast.map(f => f.value)];
+  window._fcast = new Chart(canvas, {
+    type: 'line', data: {
+      labels, datasets: [
+        { label: 'Historique', data: histData, borderColor: '#4caf50', backgroundColor: 'rgba(76,175,80,0.1)', fill: true, tension: 0.3, pointRadius: 4 },
+        { label: 'Prévision', data: fcastData, borderColor: '#f9a825', borderDash: [5, 5], backgroundColor: 'rgba(249,168,37,0.1)', fill: true, tension: 0.3, pointRadius: 4 }
+      ]
+    }, options: { responsive: true, maintainAspectRatio: false }
+  });
+  document.getElementById('fcast-total').textContent = Math.round(data.total) + ' kg';
+  document.getElementById('fcast-weekly-avg').textContent = Math.round(data.total / weeks) + ' kg';
+  document.getElementById('fcast-trend').textContent = data.trend;
+  document.getElementById('fcast-r2').textContent = (data.r2 * 100).toFixed(0) + '%';
+}
+
+function renderForecastKPIs() {
+  updateReportingKPIs();
+}
+
+// ═══════════════════ SEASONAL ANALYSIS ═══════════════════
+function renderSeasonalAnalysis() {
+  const canvas = document.getElementById('chartSeasonal');
+  const tbody = document.getElementById('seas-table-body');
+  if (!canvas || !tbody) return;
+  const mode = document.getElementById('seas-view-mode')?.value || 'overview';
+  const monthly = {};
+  state.productions.forEach(p => {
+    const m = p.date.slice(0, 7);
+    if (!monthly[m]) monthly[m] = [];
+    monthly[m].push(p.qty);
+  });
+  const months = Object.keys(monthly).sort();
+  const monthNames = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Aoû','Sep','Oct','Nov','Déc'];
+  if (months.length === 0) return;
+  if (window._seasChart) window._seasChart.destroy();
+  if (mode === 'overview') {
+    const byMonth = {};
+    months.forEach(m => {
+      const mn = parseInt(m.slice(5));
+      if (!byMonth[mn]) byMonth[mn] = [];
+      byMonth[mn].push(...monthly[m]);
+    });
+    const labels = monthNames;
+    const means = labels.map((_, i) => { const d = byMonth[i + 1] || []; return d.length > 0 ? d.reduce((a, b) => a + b, 0) / d.length : 0; });
+    window._seasChart = new Chart(canvas, {
+      type: 'bar', data: { labels, datasets: [{ label: 'Moyenne (kg)', data: means, backgroundColor: 'rgba(76,175,80,0.6)' }] },
+      options: { responsive: true, maintainAspectRatio: false }
+    });
+    let maxMonth = 0, maxVal = 0;
+    means.forEach((v, i) => { if (v > maxVal) { maxVal = v; maxMonth = i; } });
+    document.getElementById('seas-max-month').textContent = monthNames[maxMonth] || '—';
+    document.getElementById('seas-peak-avg').textContent = Math.round(maxVal) + ' kg';
+  } else {
+    const years = [...new Set(months.map(m => m.slice(0, 4)))].sort();
+    const byYear = {};
+    years.forEach(y => { byYear[y] = Array(12).fill(0); });
+    months.forEach(m => {
+      const y = m.slice(0, 4), mn = parseInt(m.slice(5)) - 1;
+      byYear[y][mn] = (byYear[y][mn] || 0) + (monthly[m].reduce((a, b) => a + b, 0) / monthly[m].length);
+    });
+    window._seasChart = new Chart(canvas, {
+      type: 'line', data: { labels: monthNames, datasets: years.map((y, i) => ({ label: y, data: byYear[y], borderColor: ['#4caf50','#1976d2','#f9a825'][i], tension: 0.3 })) },
+      options: { responsive: true, maintainAspectRatio: false }
+    });
+  }
+  document.getElementById('seas-nb-cycles').textContent = months.length;
+  tbody.innerHTML = '';
+  const byMonth2 = {};
+  months.forEach(m => {
+    const mn = parseInt(m.slice(5));
+    if (!byMonth2[mn]) byMonth2[mn] = [];
+    byMonth2[mn].push(...monthly[m]);
+  });
+  for (let i = 1; i <= 12; i++) {
+    const d = byMonth2[i] || [];
+    if (d.length > 0) {
+      const mean = d.reduce((a, b) => a + b, 0) / d.length;
+      const min = Math.min(...d), max = Math.max(...d);
+      tbody.innerHTML += '<tr><td>' + monthNames[i - 1] + '</td><td>' + Math.round(mean) + '</td><td>' + Math.round(min) + '</td><td>' + Math.round(max) + '</td><td>' + d.length + '</td></tr>';
+    }
+  }
+  const variability = months.length > 1 ? Object.values(byMonth2).filter(d => d.length > 0).length : 0;
+  document.getElementById('seas-variability').textContent = variability + '/12 mois';
+}
+
+// ═══════════════════ SCENARIO SIMULATOR ═══════════════════
+function computeScenario() {
+  const weeks = parseInt(document.getElementById('sim-weeks')?.value || '8');
+  const multiplier = parseFloat(document.getElementById('sim-multiplier')?.value || '1.5');
+  const extraKg = parseFloat(document.getElementById('sim-extra-kg')?.value || '0');
+  const data = generateForecast(weeks);
+  if (!data) return null;
+  const scenarioForecast = data.forecast.map(f => ({ week: f.week, value: Math.round(f.value * multiplier + extraKg * 10) / 10 }));
+  const baseTotal = data.total;
+  const scenarioTotal = scenarioForecast.reduce((s, f) => s + f.value, 0);
+  return {
+    weeks, multiplier, extraKg, baseTotal, scenarioTotal, diff: scenarioTotal - baseTotal, pct: baseTotal > 0 ? (scenarioTotal - baseTotal) / baseTotal * 100 : 0,
+    history: data.history, baseForecast: data.forecast, scenarioForecast
+  };
+}
+
+function renderScenarioSimulator() {
+  const data = computeScenario();
+  const canvas = document.getElementById('chartSimulator');
+  const empty = document.getElementById('sim-empty');
+  if (!canvas) return;
+  if (!data) { if (empty) empty.style.display = 'flex'; return; }
+  if (empty) empty.style.display = 'none';
+  if (window._simChart) window._simChart.destroy();
+  const labels = [...data.history.map(h => h.week), ...data.baseForecast.map(f => f.week)];
+  const hist = [...data.history.map(h => h.value), ...Array(data.baseForecast.length).fill(null)];
+  const base = [...Array(data.history.length).fill(null), ...data.baseForecast.map(f => f.value)];
+  const scenario = [...Array(data.history.length).fill(null), ...data.scenarioForecast.map(f => f.value)];
+  window._simChart = new Chart(canvas, {
+    type: 'line', data: {
+      labels, datasets: [
+        { label: 'Historique', data: hist, borderColor: '#4caf50', tension: 0.3, pointRadius: 3 },
+        { label: 'Base', data: base, borderColor: '#f9a825', borderDash: [5, 5], tension: 0.3, pointRadius: 3 },
+        { label: 'Scénario', data: scenario, borderColor: '#1976d2', tension: 0.3, pointRadius: 3 }
+      ]
+    }, options: { responsive: true, maintainAspectRatio: false }
+  });
+  document.getElementById('sim-base-total').textContent = Math.round(data.baseTotal) + ' kg';
+  document.getElementById('sim-scenario-total').textContent = Math.round(data.scenarioTotal) + ' kg';
+  document.getElementById('sim-diff').textContent = (data.diff >= 0 ? '+' : '') + Math.round(data.diff) + ' kg';
+  document.getElementById('sim-pct').textContent = (data.pct >= 0 ? '+' : '') + data.pct.toFixed(1) + '%';
+}
+
+function updateSimLabel() {
+  const val = parseFloat(document.getElementById('sim-multiplier').value);
+  document.getElementById('sim-multiplier-val').textContent = val.toFixed(1) + 'x';
+  renderScenarioSimulator();
+}
+
+// ═══════════════════ SCENARIO MANAGEMENT ═══════════════════
+function loadScenarios() {
+  try {
+    const s = localStorage.getItem('biozar_scenarios');
+    if (s) state.scenarios = JSON.parse(s);
+  } catch(e) {}
+  return state.scenarios || [];
+}
+
+function saveScenarios() {
+  try { localStorage.setItem('biozar_scenarios', JSON.stringify(state.scenarios)); } catch(e) {}
+}
+
+function addScenario() {
+  const name = prompt('Nom du scénario :', 'Scénario ' + (state.scenarios.length + 1));
+  if (!name) return;
+  const multiplier = parseFloat(document.getElementById('sim-multiplier').value);
+  const extraKg = parseFloat(document.getElementById('sim-extra-kg').value);
+  const weeks = parseInt(document.getElementById('sim-weeks').value);
+  state.scenarios.push({ name, multiplier, extraKg, weeks, added: new Date().toISOString().slice(0, 10) });
+  saveScenarios();
+  renderScenarioList();
+  showToast('Scénario "' + name + '" ajouté !');
+}
+
+function removeScenario(idx) {
+  state.scenarios.splice(idx, 1);
+  saveScenarios();
+  renderScenarioList();
+}
+
+function renderScenarioList() {
+  const list = document.getElementById('scenario-list');
+  const empty = document.getElementById('scenario-empty');
+  if (!list) return;
+  list.innerHTML = '';
+  if (!state.scenarios || state.scenarios.length === 0) { if (empty) empty.style.display = 'block'; return; }
+  if (empty) empty.style.display = 'none';
+  state.scenarios.forEach((s, i) => {
+    const div = document.createElement('div');
+    div.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:6px 10px;background:var(--green-pale);border-radius:6px;font-size:12px';
+    div.innerHTML = '<span><strong>' + s.name + '</strong> — ×' + s.multiplier + (s.extraKg > 0 ? ', +' + s.extraKg + ' kg/sem' : '') + ', ' + s.weeks + ' sem.</span><button class="btn-danger" style="padding:2px 6px;font-size:10px" onclick="removeScenario(' + i + ')">✖</button>';
+    list.appendChild(div);
+  });
+}
+
+// ═══════════════════ CSV EXPORT ═══════════════════
+function exportForecastCSV() {
+  const data = computeScenario();
+  if (!data) { showToast('Pas assez de données pour exporter.', 'error'); return; }
+  let csv = '\ufeffSemaine;Historique (kg);Prévision Base (kg);Scénario (kg)\n';
+  const maxLen = Math.max(data.history.length, data.baseForecast.length);
+  for (let i = 0; i < maxLen; i++) {
+    const h = i < data.history.length ? data.history[i] : null;
+    const b = i < data.baseForecast.length ? data.baseForecast[i] : null;
+    const s = i < data.scenarioForecast.length ? data.scenarioForecast[i] : null;
+    csv += (h ? h.week : '') + ';' + (h ? h.value : '') + ';' + (b ? b.value : '') + ';' + (s ? s.value : '') + '\n';
+  }
+  csv += '\nTOTAL;' + Math.round(data.baseTotal) + ';' + Math.round(data.scenarioTotal) + '\n';
+  csv += 'Écart;' + Math.round(data.diff) + ' kg;' + data.pct.toFixed(1) + '%\n';
+  csv += 'Boost;×' + data.multiplier + ';Extra;' + data.extraKg + ' kg/sem;R²;' + (data.pct > 0 ? data.pct.toFixed(0) : '—') + '%\n';
+  download('BIOZAR_Previsions_' + new Date().toISOString().slice(0, 10) + '.csv', csv);
+  showToast('CSV exporté !');
+}
+
+function exportMultiScenarioCSV() {
+  const scenarios = loadScenarios();
+  if (scenarios.length === 0) { showToast('Aucun scénario sauvegardé.', 'error'); return; }
+  const baseData = generateForecast(8);
+  if (!baseData) { showToast('Pas assez de données.', 'error'); return; }
+  let csv = '\ufeffSemaine;Historique (kg);Prévision Base (kg)';
+  scenarios.forEach(s => { csv += ';' + s.name + ' (kg)'; });
+  csv += '\n';
+  const weeks = 8;
+  const maxLen = Math.max(baseData.history.length, weeks);
+  const scenarioForecasts = scenarios.map(s => {
+    const fData = generateForecast(s.weeks || weeks);
+    return fData ? fData.forecast : [];
+  });
+  for (let i = 0; i < maxLen; i++) {
+    const h = i < baseData.history.length ? baseData.history[i] : null;
+    const b = i < baseData.forecast.length ? baseData.forecast[i] : null;
+    csv += (h ? h.week : 'S+' + (i + 1)) + ';' + (h ? h.value : '') + ';' + (b ? b.value : '') + ';';
+    scenarioForecasts.forEach(f => { csv += (i < f.length ? f[i].value : '') + ';'; });
+    csv = csv.slice(0, -1) + '\n';
+  }
+  download('BIOZAR_MultiScenarios_' + new Date().toISOString().slice(0, 10) + '.csv', csv);
+  showToast('Multi-scénarios exporté !');
+}
+
+// ═══════════════════ AUTO EXPORT ═══════════════════
+let _autoExportTimer = null;
+
+function loadAutoExportConfig() {
+  let config = { enabled: false, interval: 'weekly', lastExport: null };
+  try {
+    const saved = localStorage.getItem('biozar_auto_export');
+    if (saved) config = JSON.parse(saved);
+  } catch(e) {}
+  const cb = document.getElementById('auto-export-enable');
+  const sel = document.getElementById('auto-export-interval');
+  if (cb) cb.checked = config.enabled;
+  if (sel) { sel.value = config.interval; sel.disabled = !config.enabled; }
+  state.autoExportConfig = config;
+  scheduleNextExport(config);
+  updateAutoExportStatus(config);
+}
+
+function saveAutoExportConfig() {
+  const enabled = document.getElementById('auto-export-enable')?.checked || false;
+  const interval = document.getElementById('auto-export-interval')?.value || 'weekly';
+  const config = { enabled, interval, lastExport: state.autoExportConfig?.lastExport || null };
+  try { localStorage.setItem('biozar_auto_export', JSON.stringify(config)); } catch(e) {}
+  state.autoExportConfig = config;
+  return config;
+}
+
+function scheduleNextExport(config) {
+  if (_autoExportTimer) { clearTimeout(_autoExportTimer); _autoExportTimer = null; }
+  if (!config || !config.enabled) return;
+  const intervals = { daily: 86400000, weekly: 604800000, monthly: 2592000000 };
+  const ms = intervals[config.interval] || 604800000;
+  let delay = ms;
+  if (config.lastExport) {
+    const elapsed = Date.now() - new Date(config.lastExport).getTime();
+    if (elapsed < ms) delay = ms - elapsed;
+  }
+  delay = Math.max(60000, Math.min(delay, 86400000));
+  _autoExportTimer = setTimeout(() => {
+    doAutoExport();
+    scheduleNextExport(saveAutoExportConfig());
+  }, delay);
+  updateAutoExportStatus(config);
+}
+
+function toggleAutoExport() {
+  const config = saveAutoExportConfig();
+  const cb = document.getElementById('auto-export-enable');
+  const sel = document.getElementById('auto-export-interval');
+  if (sel) sel.disabled = !config.enabled;
+  if (config.enabled) {
+    config.lastExport = null;
+    try { localStorage.setItem('biozar_auto_export', JSON.stringify(config)); } catch(e) {}
+    scheduleNextExport(config);
+    showToast('Export automatique activé !');
+  } else {
+    if (_autoExportTimer) { clearTimeout(_autoExportTimer); _autoExportTimer = null; }
+    updateAutoExportStatus(config);
+    showToast('Export automatique désactivé.');
+  }
+}
+
+function doAutoExport() {
+  exportForecastCSV();
+  const config = saveAutoExportConfig();
+  config.lastExport = new Date().toISOString();
+  try { localStorage.setItem('biozar_auto_export', JSON.stringify(config)); } catch(e) {}
+  state.autoExportConfig = config;
+  showNotif('Export automatique effectué !', 'success');
+}
+
+function updateAutoExportStatus(config) {
+  const status = document.getElementById('auto-export-status');
+  const next = document.getElementById('auto-export-next');
+  if (!status) return;
+  if (config && config.enabled) {
+    status.textContent = '🟢 Actif';
+    const intervals = { daily: '24h', weekly: '7 jours', monthly: '30 jours' };
+    if (next) next.textContent = 'Prochain: ' + (intervals[config.interval] || '—');
+  } else {
+    status.textContent = '⚪ Inactif';
+    if (next) next.textContent = '';
+  }
+}
+
+// ═══════════════════ EXPORT OPTIONS & COMBINED ═══════════════════
+let _exportingCombo = false;
+
+function showExportProgress() {
+  const c = document.getElementById('exp-progress-container-fixed');
+  if (c) c.style.display = 'block';
+  updateExportProgress(0, 'Préparation...');
+}
+
+function updateExportProgress(pct, status) {
+  const fill = document.getElementById('exp-progress-fill-fixed');
+  const pctEl = document.getElementById('exp-progress-pct-fixed');
+  const statusEl = document.getElementById('exp-progress-status-fixed');
+  if (fill) fill.style.width = Math.min(pct, 100) + '%';
+  if (pctEl) pctEl.textContent = Math.min(pct, 100) + '%';
+  if (statusEl && status) statusEl.textContent = status;
+}
+
+function hideExportProgress() {
+  const c = document.getElementById('exp-progress-container-fixed');
+  if (c) c.style.display = 'none';
+  updateExportProgress(0, '');
+}
+
+function showExportOptionsModal() {
+  document.getElementById('export-options-modal').classList.add('open');
+}
+
+function closeExportOptions() {
+  document.getElementById('export-options-modal').classList.remove('open');
+}
+
+function doExportWithSelection() {
+  closeExportOptions();
+  const pdfKpi = document.getElementById('exp-pdf-kpi')?.checked || false;
+  const pdfDonnees = document.getElementById('exp-pdf-donnees')?.checked || false;
+  const csvPrevisions = document.getElementById('exp-csv-previsions')?.checked || false;
+  const csvMulti = document.getElementById('exp-csv-multi')?.checked || false;
+  const hasPdf = pdfKpi || pdfDonnees;
+  const hasCsv = csvPrevisions || csvMulti;
+  if (!hasPdf && !hasCsv) { showToast('Sélectionnez au moins une section.', 'error'); return; }
+  if (_exportingCombo) { showToast('Export déjà en cours...', 'error'); return; }
+  _exportingCombo = true;
+  window._exportPdfOptions = { kpi: pdfKpi, donnees: pdfDonnees };
+  showExportProgress();
+  let hasErrors = false;
+  function _reset() { hideExportProgress(); _exportingCombo = false; window._exportPdfOptions = null; }
+  if (hasPdf) {
+    updateExportProgress(10, 'Préparation du PDF...');
+    setTimeout(() => {
+      updateExportProgress(25, 'Génération du PDF...');
+      try { exportReportingPDF(); } catch(e) { console.error('PDF error:', e); hasErrors = true; }
+      if (!hasCsv) {
+        setTimeout(() => { updateExportProgress(100, 'PDF généré !'); if (!hasErrors) showToast('PDF généré !'); setTimeout(_reset, 1200); }, 500);
+      } else {
+        updateExportProgress(50, 'PDF généré, préparation CSV...');
+      }
+    }, 500);
+  }
+  if (hasCsv) {
+    const delay = hasPdf ? 6000 : 500;
+    setTimeout(() => {
+      updateExportProgress(60, 'Export CSV en cours...');
+      if (csvPrevisions) { updateExportProgress(70, 'Export prévisions...'); try { exportForecastCSV(); } catch(e) { hasErrors = true; } }
+      if (csvMulti) { updateExportProgress(85, 'Export multi-scénarios...'); try { exportMultiScenarioCSV(); } catch(e) { hasErrors = true; } }
+      updateExportProgress(100, 'Terminé !');
+      if (!hasErrors) { showNotif('Export(s) réussi(s) !', 'success'); showToast('Export(s) terminé(s) !'); }
+      else { showToast('Erreur lors de l\'export.', 'error'); }
+      setTimeout(_reset, 1200);
+    }, delay);
+  }
+}
+
+function exportCombinedReport() {
+  showExportOptionsModal();
+}
+
+// ═══════════════════ EXPORT PDF ═══════════════════
+function addChartToPDF(pdf, canvasId, title, margin, pageW, pageH, y, maxH) {
+  return new Promise((resolve) => {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) { resolve(y); return; }
+    try {
+      const imgData = canvas.toDataURL('image/png');
+      const imgW = pageW - margin * 2;
+      const imgH = Math.min((canvas.height / canvas.width) * imgW, maxH || 120);
+      if (y + imgH + 30 > pageH - margin) { pdf.addPage(); y = margin + 6; }
+      pdf.setFont('helvetica', 'bold'); pdf.setFontSize(11); pdf.setTextColor(26, 61, 31);
+      pdf.text(title, margin, y); y += 8;
+      pdf.addImage(imgData, 'PNG', margin, y, imgW, imgH);
+      y += imgH + 14;
+    } catch(e) {}
+    resolve(y);
+  });
+}
+
+function exportReportingPDF() {
+  const btn = document.getElementById('btn-export-pdf');
+  if (btn) btn.textContent = '⏳ Génération...';
+  renderProductionTrend(); renderSalesTrend(); renderMonthlyComparison(); renderTopProducts();
+  setTimeout(async () => {
+    try {
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF('p', 'pt', 'a4');
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+      const margin = 40;
+      let y = margin + 6;
+      pdf.setFont('helvetica', 'bold'); pdf.setFontSize(22); pdf.setTextColor(26, 61, 31);
+      pdf.text('BIOZAR', margin, y); y += 16;
+      pdf.setFontSize(11); pdf.setTextColor(90, 112, 96);
+      pdf.text('Rapport de pilotage - ' + new Date().toLocaleDateString('fr-FR'), margin, y); y += 6;
+      pdf.setDrawColor(45, 106, 53); pdf.setLineWidth(2);
+      pdf.line(margin, y, pageW - margin, y); y += 20;
+
+      var _expOpts = window._exportPdfOptions || { kpi: true, donnees: true };
+      if (_expOpts.kpi) {
+        pdf.setFont('helvetica', 'bold'); pdf.setFontSize(14); pdf.setTextColor(26, 61, 31);
+        pdf.text('Indicateurs Clés (KPI)', margin, y); y += 18;
+        const kpiData = [
+          { label: 'Production totale', value: (document.getElementById('rpt-total-prod') || {}).textContent || '0 kg' },
+          { label: 'CA total', value: (document.getElementById('rpt-total-sales') || {}).textContent || '0 Ar' },
+          { label: 'Moyenne mensuelle', value: (document.getElementById('rpt-avg-monthly') || {}).textContent || '0 kg' },
+          { label: 'Top produit', value: (document.getElementById('rpt-top-product') || {}).textContent || '-' }
+        ];
+        pdf.setFontSize(10);
+        kpiData.forEach((k, i) => {
+          const x = margin + (i % 2) * ((pageW - margin * 2) / 2);
+          if (i % 2 === 0 && i > 0) y += 50;
+          pdf.setFillColor(232, 245, 233); pdf.roundedRect(x, y, (pageW - margin * 2) / 2 - 10, 40, 4, 4, 'F');
+          pdf.setTextColor(26, 61, 31);
+          pdf.setFont('helvetica', 'normal'); pdf.text(k.label, x + 8, y + 16);
+          pdf.setFont('helvetica', 'bold'); pdf.setFontSize(12);
+          pdf.text(k.value, x + 8, y + 32);
+          pdf.setFontSize(10);
+        });
+        y += 50;
+      }
+
+      y = await addChartToPDF(pdf, 'chartProdTrend', 'Tendance Production (kg)', margin, pageW, pageH, y, 130);
+      y = await addChartToPDF(pdf, 'chartSalesTrend', 'Tendance Ventes (Ar)', margin, pageW, pageH, y, 130);
+      y = await addChartToPDF(pdf, 'chartMonthlyComp', 'Comparaison Mensuelle', margin, pageW, pageH, y, 130);
+      y = await addChartToPDF(pdf, 'chartTopProducts', 'Performance Produits', margin, pageW, pageH, y, 130);
+
+      if (_expOpts.donnees) {
+        const tableBody = document.getElementById('rpt-data-body');
+        if (tableBody && tableBody.children.length > 0) {
+          if (y + 60 > pageH - margin) { pdf.addPage(); y = margin + 6; }
+          pdf.setFont('helvetica', 'bold'); pdf.setFontSize(11); pdf.setTextColor(26, 61, 31);
+          pdf.text('Données Brutes', margin, y); y += 16;
+          pdf.setFont('helvetica', 'normal'); pdf.setFontSize(7); pdf.setTextColor(50, 50, 50);
+          let rowCount = 0;
+          for (let row of tableBody.children) {
+            if (y + 10 > pageH - margin) { pdf.addPage(); y = margin + 6; rowCount = 0; }
+            const cells = row.querySelectorAll('td');
+            if (cells.length >= 4) {
+              const text = (cells[0]?.textContent || '') + ' | ' + (cells[1]?.textContent || '') + ' | ' + (cells[3]?.textContent || '') + ' | ' + (cells[4]?.textContent || '');
+              pdf.text(text, margin + 4, y);
+              y += 9;
+            }
+          }
+        }
+      }
+
+      for (let i = 1; i <= pdf.internal.getNumberOfPages(); i++) {
+        pdf.setPage(i);
+        pdf.setFont('helvetica', 'normal'); pdf.setFontSize(8); pdf.setTextColor(150, 150, 150);
+        pdf.text('BIOZAR - Rapport de pilotage', margin, pageH - 20);
+        pdf.text('Page ' + i + '/' + pdf.internal.getNumberOfPages(), pageW - margin - 40, pageH - 20);
+      }
+      pdf.save('BIOZAR_Reporting_' + new Date().toISOString().slice(0, 10) + '.pdf');
+    } catch(e) { console.error('PDF error:', e); showToast('Erreur PDF.', 'error'); }
+    finally { if (btn) btn.textContent = '📥 PDF'; }
+  }, 200);
+}
+
+// ═══════════════════ ADMIN ═══════════════════
+function showAdminTab(tab) {
+  document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.admin-tab-content').forEach(t => t.classList.remove('active'));
+  const tabEl = document.querySelector('.admin-tab[onclick*="' + tab + '"]');
+  if (tabEl) tabEl.classList.add('active');
+  const content = document.getElementById('tab-' + tab);
+  if (content) content.classList.add('active');
+}
+
+function renderAdminProducts() {
+  const list = document.getElementById('admin-products-list');
+  if (!list) return;
+  list.innerHTML = state.products.map((p, i) =>
+    '<div class="product-edit-row"><span class="product-edit-emoji">' + p.emoji + '</span><div><div style="font-weight:700;font-size:14px">' + p.name + '</div><div style="font-size:11px;color:var(--text-muted)">' + (p.target || '') + '</div></div><input class="charge-input" type="number" value="' + p.price + '" onchange="updateProdPrice(' + i + ',this.value)" style="width:120px" /><input class="charge-input" type="number" value="' + p.cost + '" onchange="updateProdCost(' + i + ',this.value)" style="width:120px" /><button class="btn-danger" onclick="deleteProduct(' + i + ')">🗑️</button></div>'
+  ).join('');
+}
+
+function renderAdminCharges() {
+  const list = document.getElementById('admin-charges-list');
+  if (!list) return;
+  const labels = { loyer: 'Loyer', salaires: 'Salaires', eau: 'Eau', electricite: 'Électricité', intrants: 'Intrants', transport: 'Transport', marketing: 'Marketing', autres: 'Autres' };
+  list.innerHTML = Object.entries(state.charges).map(([key, val]) =>
+    '<div class="charge-edit-row"><div><div class="lbl">' + (labels[key] || key) + '</div></div><input class="charge-input" type="number" value="' + val + '" onchange="updateCharge(\'' + key + '\',this.value)" /></div>'
+  ).join('');
+}
+
+function updateCharge(key, val) { state.charges[key] = parseFloat(val) || 0; saveState(); }
+function updateProdPrice(idx, val) { state.products[idx].price = parseFloat(val) || 0; saveState(); renderProducts(); }
+function updateProdCost(idx, val) { state.products[idx].cost = parseFloat(val) || 0; saveState(); renderProducts(); }
+function deleteProduct(idx) { if (confirm('Supprimer ' + state.products[idx].name + ' ?')) { state.products.splice(idx, 1); saveState(); renderAdminProducts(); renderProducts(); } }
+
+function changePassword() {
+  const pwd = document.getElementById('new-password').value.trim();
+  if (!pwd || pwd.length < 4) { showToast('Minimum 4 caractères.', 'error'); return; }
+  state.password = pwd;
+  try { localStorage.setItem('biozar_password', pwd); } catch(e) {}
+  saveState();
+  showToast('Mot de passe changé !');
+  document.getElementById('new-password').value = '';
+}
+
+function exportJSON() {
+  download('BIOZAR_data_' + new Date().toISOString().slice(0, 10) + '.json', JSON.stringify(state, null, 2), 'application/json');
+  showToast('Données exportées !');
+}
+
+function importJSON(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (data.productions) state.productions = data.productions;
+      if (data.clients) state.clients = data.clients;
+      if (data.products) state.products = data.products;
+      if (data.charges) state.charges = data.charges;
+      if (data.tresorerie) state.tresorerie = data.tresorerie;
+      if (data.incidents) state.incidents = data.incidents;
+      saveState();
+      renderAll();
+      showToast('Données importées !');
+    } catch(err) { showToast('Fichier JSON invalide.', 'error'); }
+  };
+  reader.readAsText(file);
+}
+
+function resetAllData() {
+  if (!confirm('⚠️ Êtes-vous sûr de vouloir supprimer TOUTES les données ?')) return;
+  if (!confirm('⚠️⚠️ Dernière confirmation : cette action est irréversible !')) return;
+  state.productions = []; state.clients = []; state.tresorerie = []; state.incidents = [];
+  try { localStorage.removeItem('biozar_state'); } catch(e) {}
+  renderAll();
+  showToast('Toutes les données ont été réinitialisées.');
+}
+
+// ═══════════════════ REQUEST NOTIF PERMISSION ═══════════════════
+function requestNotifPermission() {
+  if (!('Notification' in window)) { showToast('Notifications non supportées.'); return; }
+  if (Notification.permission === 'granted') { showToast('Notifications déjà activées !'); }
+  else if (Notification.permission !== 'denied') {
+    Notification.requestPermission().then(perm => {
+      if (perm === 'granted') showToast('Notifications activées ! 🔔');
+    });
+  }
+}
+
+// ═══════════════════ SERVICE WORKER ═══════════════════
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(e => console.error('SW registration failed'));
+}
+
+// ═══════════════════ INIT ═══════════════════
+loadState();
+updateDate();
+
+// Hide splash
+setTimeout(() => {
+  const splash = document.getElementById('appSplash');
+  if (splash) { splash.style.opacity = '0'; setTimeout(() => { splash.style.display = 'none'; }, 800); }
+}, 1000);
+</script>
+</body>
+</html>

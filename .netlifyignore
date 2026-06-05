@@ -1,0 +1,9 @@
+biozar-app/
+.git/
+node_modules/
+.gemini/
+brain/
+scratch/
+task.md
+walkthrough.md
+implementation_plan.md

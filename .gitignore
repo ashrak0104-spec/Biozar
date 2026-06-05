@@ -1,0 +1,35 @@
+node_modules/
+biozar-app/node_modules/
+biozar-app/android/
+*.keystore
+.gemini/
+brain/
+scratch/
+.DS_Store
+Thumbs.db
+
+# Local Netlify folder
+.netlify
+
+# Firebase (migré vers Cloudflare Pages)
+firebase.json
+.firebaserc
+firestore.rules
+firestore.indexes.json
+connector.yaml
+dataconnect/
+src/dataconnect-generated/
+
+# Functions (migré vers Cloudflare Workers)
+functions/lib/
+functions/node_modules/
+ai/lib/
+ai/node_modules/
+
+# Fichiers d'environnement
+.env
+.env.local
+
+# Modules locaux
+biozar-app/src/dataconnect-generated/
+biozar-app/www/firebase-init.js
