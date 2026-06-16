@@ -21,11 +21,10 @@ jobs:
       - name: 📥 Checkout du code
         uses: actions/checkout@v4
 
-    - name: 🚀 Déployer sur Cloudflare Pages
+      - name: 🚀 Déployer sur Cloudflare Pages
         uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          # On utilise 'command' qui est le paramètre attendu par l'action v4
           command: pages deploy biozar --project-name=biozar
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
