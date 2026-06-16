@@ -1,37 +1,12 @@
-# ═══════════════════════════════════════
-# BIOZAR — Cloudflare Pages Ignore
-# ═══════════════════════════════════════
-
-# Dépendances
-node_modules/
-
-# App Android (Capacitor)
-biozar-app/
-
-# Fichiers Excel & documents business
-biozar/*.xlsx
-biozar/*.pptx
-biozar/recycl/
-
-# APK builds
+# Exclure les builds Android lourds
 *.apk
 
-# Fichiers de build et config
-functions/node_modules/
-functions/src/
+# Exclure les configurations d'autres plateformes
+.firebase/
+fonctions/
+.github/
 
-# Fichiers d'environnement/Docs
+# Exclure les fichiers de documentation et scripts locaux
 *.md
 *.bat
-*.code-workspace
-
-# Autres providers
-.netlifyignore
-.vercelignore
-.netlify/
-
-# Secrets et config locale
-*.keystore
-.env
-.env.local
-.env.*.local
+clqude.code-workspace
