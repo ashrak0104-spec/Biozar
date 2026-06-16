@@ -27,5 +27,5 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           projectName: biozar
-          directory: .
+          directory: biozar
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
