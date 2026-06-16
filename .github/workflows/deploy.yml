@@ -29,11 +29,12 @@ jobs:
       # - name: 🔨 Build du projet
       #   run: npm run build
 
-      - name: 🚀 Déployer sur Cloudflare Pages
+    - name: 🚀 Déployer sur Cloudflare Pages
         uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          # Répertoire racine du site statique (pas de build)
-          command: pages deploy . --project-name=biozar
+          # On indique à Wrangler de déployer la racine (.) via l'argument dédié
+          projectName: biozar
+          directory: .
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
