@@ -1,0 +1,39 @@
+# 🚀 BIOZAR — Déploiement automatique Cloudflare Pages
+# Déclenché à chaque push sur les branches main/master
+
+name: Deploy to Cloudflare Pages
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch: # Permet un déclenchement manuel
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+    name: Deploy to Cloudflare Pages
+
+    steps:
+      - name: 📥 Checkout du code
+        uses: actions/checkout@v4
+
+      # Projet statique (PWA) — pas de build nécessaire.
+      # Si un build est ajouté plus tard, décommentez les étapes ci-dessous :
+      # - name: 📦 Installer les dépendances
+      #   run: npm ci
+      # - name: 🔨 Build du projet
+      #   run: npm run build
+
+      - name: 🚀 Déployer sur Cloudflare Pages
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          # Répertoire racine du site statique (pas de build)
+          command: pages deploy . --project-name=biozar
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}

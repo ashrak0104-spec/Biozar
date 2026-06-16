@@ -23,11 +23,9 @@ const FONT_URLS = [
   'https://fonts.gstatic.com/'
 ];
 
-// Firebase CDN & PDF Libraries
-const CDN_CACHE = 'biozar-cdn-v1';
+// CDN Libraries (PDF export)
+const CDN_CACHE = 'biozar-cdn-v2';
 const CDN_URLS = [
-  'https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js',
-  'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js',
   'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js'
 ];
@@ -157,12 +155,6 @@ self.addEventListener('fetch', event => {
   // ═══ FONTS GOOGLE : Cache First ───
   if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
     event.respondWith(cacheFirst(request, FONT_CACHE));
-    return;
-  }
-
-  // ═══ FIREBASE CDN : Cache First ───
-  if (url.hostname === 'www.gstatic.com' && url.pathname.includes('/firebasejs/')) {
-    event.respondWith(cacheFirst(request, CDN_CACHE));
     return;
   }
 
