@@ -232,7 +232,7 @@
   </style>
 </head>
 <body class="locked">
-<div id="login-screen" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center">
+<div id="login-screen" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:9999;align-items:center;justify-content:center">
   <div style="background:var(--surface);border-radius:20px;padding:40px;box-shadow:var(--shadow-lg);max-width:400px;width:90%;text-align:center">
     <div style="font-size:48px;margin-bottom:8px">🌿</div>
     <h2 style="color:var(--green-dark);margin:0 0 4px">BIOZAR</h2>
@@ -1223,7 +1223,8 @@ function doLogin() {
   state.currentUser = user;
   state.currentRole = user.role;
   saveState();
-  hideLoginScreen();
+  var ls = document.getElementById('login-screen');
+  if (ls) ls.style.display = 'none';
   applyRoleAccess(user.role);
   showPage('dashboard');
   showToast('Bienvenue ' + user.name + ' !');
@@ -2241,6 +2242,11 @@ function renderAll() {
   renderChecklist();
   renderStatusLog();
   renderAnalytics();
+  renderCommandes();
+  renderParcelles();
+  renderFactures();
+  renderMeteo();
+  renderMarchePrix();
   renderUserInfo();
   renderSyncHistory();
   renderNotifications();
@@ -3613,9 +3619,11 @@ function requestNotifPermission() {
 // Login check
 if (state.currentUser) {
   applyRoleAccess(state.currentRole);
-  hideLoginScreen();
+  var ls = document.getElementById('login-screen');
+  if (ls) ls.style.display = 'none';
 } else {
-  showLoginScreen();
+  var ls = document.getElementById('login-screen');
+  if (ls) ls.style.display = 'flex';
 }
 // Track session
 trackSession();
