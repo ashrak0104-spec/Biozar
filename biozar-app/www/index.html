@@ -738,10 +738,10 @@ let state = {
   whatsappPhone: '',
   statusLog: [
     { client: 'Hôtel Royal Palissandre', from: 'Échantillon déposé', to: 'Abonné', date: '2026-01-15' },
-    { client: 'Le Jardin d'Ankify', from: 'En prospection', to: 'Abonné', date: '2026-01-20' },
+    { client: 'Le Jardin d\'Ankify', from: 'En prospection', to: 'Abonné', date: '2026-01-20' },
     { client: 'Miora Soa', from: 'Client ponctuel', to: 'Abonné', date: '2026-01-25' },
-    { client: 'Hôtel Montagne d'Ambre', from: 'En prospection', to: 'Client ponctuel', date: '2026-02-10' },
-    { client: 'Les Jardins d'Analamena', from: 'Client ponctuel', to: 'Abonné', date: '2026-02-01' },
+    { client: 'Hôtel Montagne d\'Ambre', from: 'En prospection', to: 'Client ponctuel', date: '2026-02-10' },
+    { client: 'Les Jardins d\'Analamena', from: 'Client ponctuel', to: 'Abonné', date: '2026-02-01' },
     { client: 'Chez Gaspard', from: 'En prospection', to: 'Client ponctuel', date: '2026-02-28' },
     { client: 'Biolove Market', from: 'En prospection', to: 'Échantillon déposé', date: '2026-03-12' },
     { client: 'Résidence Mahavoky', from: 'En prospection', to: 'Client ponctuel', date: '2026-03-20' },
@@ -1842,14 +1842,11 @@ function saveClient() {
       showNotif('Nouvel abonné', c.nom + ' est maintenant abonné ! (était : ' + oldStatut + ')');
       sendWhatsAppAlert('BIOZAR CRM : ' + c.nom + ' est maintenant abonné ! Ancien statut : ' + oldStatut);
     } else if (oldStatut === 'Abonné' && newStatut !== 'Abonné') {
-      showNotif('Désabonnement', c.nom + ' n'est plus abonné (maintenant : ' + newStatut + ')');
+      showNotif('Désabonnement', c.nom + ' n\'est plus abonné (maintenant : ' + newStatut + ')');
     } else if (oldStatut === 'Inactif' && newStatut !== 'Inactif') {
       showNotif('Réactivation', c.nom + ' est réactivé ! (maintenant : ' + newStatut + ')');
     }
-  }
 }
-
-function switchCrmT
 
 function switchCrmTab(tab) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -2828,7 +2825,7 @@ function renderSyncHistory() {
     var badge = h.status === "ok" ? "badge-green" : "badge-red";
     var label = h.status === "ok" ? "✅ Succès" : "❌ Erreur";
     var tr = document.createElement("tr");
-    tr.innerHTML = "<td>" + (h.date || "—") + "</td><td>" + (h.time || "—") + "</td><td>" + (h.size || "—") + "</td><td><span class="" + badge + "">" + label + "</span></td>";
+    tr.innerHTML = "<td>" + (h.date || "—") + "</td><td>" + (h.time || "—") + "</td><td>" + (h.size || "—") + "</td><td><span class='" + badge + "'>" + label + "</span></td>";
     tbody.appendChild(tr);
   });
   var statsEl = document.getElementById("cloud-stats");
@@ -2836,13 +2833,13 @@ function renderSyncHistory() {
     var okCount = history.filter(function(h){return h.status==="ok"}).length;
     var errCount = history.filter(function(h){return h.status!=="ok"}).length;
     var lastSync = history.length > 0 ? history[0].date + " " + history[0].time : "Jamais";
-    statsEl.innerHTML = "<div style="display:flex;flex-direction:column;gap:10px">" + "<div style="display:flex;justify-content:space-between;font-size:13px"><span>Succès</span><strong style="color:#2d6a35">" + okCount + "</strong></div>" + "<div style="display:flex;justify-content:space-between;font-size:13px"><span>Erreurs</span><strong>" + errCount + "</strong></div>" + "<div style="display:flex;justify-content:space-between;font-size:13px"><span>Dernière sync</span><strong>" + lastSync + "</strong></div>" + "<div style="display:flex;justify-content:space-between;font-size:13px"><span>Projet</span><strong>plavawidmbtryfyausjr</strong></div>" + "</div>";
+    statsEl.innerHTML = "<div style='display:flex;flex-direction:column;gap:10px'>" + "<div style='display:flex;justify-content:space-between;font-size:13px'><span>Succès</span><strong style='color:#2d6a35'>" + okCount + "</strong></div>" + "<div style='display:flex;justify-content:space-between;font-size:13px'><span>Erreurs</span><strong>" + errCount + "</strong></div>" + "<div style='display:flex;justify-content:space-between;font-size:13px'><span>Dernière sync</span><strong>" + lastSync + "</strong></div>" + "<div style='display:flex;justify-content:space-between;font-size:13px'><span>Projet</span><strong>plavawidmbtryfyausjr</strong></div>" + "</div>";
   }
   var connEl = document.getElementById("cloud-connection-info");
   if (connEl) {
     var online = navigator.onLine;
     var lastEntry = history.length > 0 ? history[0] : null;
-    connEl.innerHTML = "<div style="display:flex;flex-direction:column;gap:10px">" + "<div style="display:flex;justify-content:space-between;font-size:13px"><span>Statut</span><span>" + (online ? "🟢 En ligne" : "🔴 Hors-ligne") + "</span></div>" + "<div style="display:flex;justify-content:space-between;font-size:13px"><span>Provider</span><strong>Supabase</strong></div>" + "<div style="display:flex;justify-content:space-between;font-size:13px"><span>Dernière taille</span><strong>" + (lastEntry ? lastEntry.size : "—") + "</strong></div>" + "<div style="display:flex;justify-content:space-between;font-size:13px"><span>Version app</span><strong>v" + state.version + "</strong></div>" + "</div>";
+    connEl.innerHTML = "<div style='display:flex;flex-direction:column;gap:10px'>" + "<div style='display:flex;justify-content:space-between;font-size:13px'><span>Statut</span><span>" + (online ? "🟢 En ligne" : "🔴 Hors-ligne") + "</span></div>" + "<div style='display:flex;justify-content:space-between;font-size:13px'><span>Provider</span><strong>Supabase</strong></div>" + "<div style='display:flex;justify-content:space-between;font-size:13px'><span>Dernière taille</span><strong>" + (lastEntry ? lastEntry.size : "—") + "</strong></div>" + "<div style='display:flex;justify-content:space-between;font-size:13px'><span>Version app</span><strong>v" + state.version + "</strong></div>" + "</div>";
   }
 }
 function updateProdPrice(idx, val) { state.products[idx].price = parseFloat(val) || 0; saveState(); renderProducts(); }
