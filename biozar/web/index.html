@@ -1118,6 +1118,7 @@ function endSession() {
 
 
 function exportUsagePDF() {
+  renderAnalytics();
   var btn = document.getElementById('btn-export-usage-pdf');
   if (btn) btn.textContent = '⏳ Génération...';
   setTimeout(async function() {

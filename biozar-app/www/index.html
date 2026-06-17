@@ -606,6 +606,7 @@
     <div class="page" id="page-analytics">
       <div class="section-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
         <div><h2>📈 Analytics & Usage</h2><p>Métriques d'utilisation de l'application</p></div>
+        <button id="btn-export-usage-pdf" class="btn-primary" onclick="exportUsagePDF()" style="padding:10px 18px;font-size:13px;white-space:nowrap">📥 PDF</button>
         <button id="btn-reset-analytics" class="btn-admin" onclick="resetAnalytics()" style="padding:10px 18px;font-size:13px;white-space:nowrap">🔄 Reset</button>
       </div>
       <div class="kpi-grid" id="analytics-kpis"></div>
@@ -1113,6 +1114,159 @@ function endSession() {
       saveState();
     }
   }
+}
+
+
+function exportUsagePDF() {
+  renderAnalytics();
+  var btn = document.getElementById('btn-export-usage-pdf');
+  if (btn) btn.textContent = '⏳ Génération...';
+  setTimeout(async function() {
+    try {
+      var jsPDF = window.jspdf.jsPDF;
+      var pdf = new jsPDF('p', 'pt', 'a4');
+      var pageW = pdf.internal.pageSize.getWidth();
+      var pageH = pdf.internal.pageSize.getHeight();
+      var margin = 40;
+      var y = margin + 6;
+      var usage = state.appUsage || {};
+
+      // ── Header ──
+      pdf.setFont('helvetica', 'bold'); pdf.setFontSize(22); pdf.setTextColor(26, 61, 31);
+      pdf.text('BIOZAR', margin, y); y += 16;
+      pdf.setFontSize(11); pdf.setTextColor(90, 112, 96);
+      pdf.text('Rapport Analytics & Usage — ' + new Date().toLocaleDateString('fr-FR'), margin, y); y += 6;
+      pdf.setDrawColor(45, 106, 53); pdf.setLineWidth(2);
+      pdf.line(margin, y, pageW - margin, y); y += 20;
+
+      // ── KPIs ──
+      var totalPV = Object.values(usage.pageViews || {}).reduce(function(a,b){return a+b;}, 0);
+      var totalFeat = Object.values(usage.featureClicks || {}).reduce(function(a,b){return a+b;}, 0);
+      var uniquePages = Object.keys(usage.pageViews || {}).length;
+      var uniqueFeat = Object.keys(usage.featureClicks || {}).length;
+
+      pdf.setFont('helvetica', 'bold'); pdf.setFontSize(14); pdf.setTextColor(26, 61, 31);
+      pdf.text('Indicateurs Clés', margin, y); y += 18;
+      var kpis = [
+        { label: 'Vues totales', value: totalPV + '' },
+        { label: 'Pages visitées', value: uniquePages + '' },
+        { label: 'Actions effectuées', value: totalFeat + '' },
+        { label: 'Sessions', value: (usage.sessionCount || 0) + '' },
+        { label: 'Première visite', value: usage.firstVisit || '—' },
+        { label: 'Fonctions trackées', value: uniqueFeat + '' }
+      ];
+      pdf.setFontSize(10);
+      kpis.forEach(function(k, i) {
+        var col = i % 3;
+        var row = Math.floor(i / 3);
+        var colW = (pageW - margin * 2) / 3;
+        var x = margin + col * colW;
+        var ky = y + row * 50;
+        pdf.setFillColor(232, 245, 233); pdf.roundedRect(x, ky, colW - 8, 40, 4, 4, 'F');
+        pdf.setTextColor(90, 112, 96); pdf.setFont('helvetica', 'normal');
+        pdf.text(k.label, x + 8, ky + 15);
+        pdf.setTextColor(26, 61, 31); pdf.setFont('helvetica', 'bold'); pdf.setFontSize(14);
+        pdf.text(k.value, x + 8, ky + 32);
+        pdf.setFontSize(10);
+      });
+      y += Math.ceil(kpis.length / 3) * 50 + 10;
+
+      // ── Charts ──
+      pdf.setFont('helvetica', 'bold'); pdf.setFontSize(14); pdf.setTextColor(26, 61, 31);
+      pdf.text('Graphiques', margin, y); y += 12;
+      y = await addChartToPDF(pdf, 'chartAnalyticsPages', 'Vues par Page', margin, pageW, pageH, y, 150);
+      y = await addChartToPDF(pdf, 'chartAnalyticsFeatures', 'Fonctions Utilisées', margin, pageW, pageH, y, 150);
+      y = await addChartToPDF(pdf, 'chartAnalyticsDaily', 'Activité Quotidienne', margin, pageW, pageH, y, 120);
+
+      // ── Page Views Table ──
+      if (y + 100 > pageH - margin) { pdf.addPage(); y = margin + 6; }
+      var pageViews = usage.pageViews || {};
+      var sortedPages = Object.keys(pageViews).sort(function(a,b){ return pageViews[b] - pageViews[a]; });
+      if (sortedPages.length > 0) {
+        pdf.setFont('helvetica', 'bold'); pdf.setFontSize(14); pdf.setTextColor(26, 61, 31);
+        pdf.text('Détail Vues par Page', margin, y); y += 16;
+        pdf.setFontSize(10); pdf.setFont('helvetica', 'bold');
+        pdf.setFillColor(45, 106, 53); pdf.rect(margin, y, pageW - margin * 2, 18, 'F');
+        pdf.setTextColor(255, 255, 255);
+        pdf.text('Page', margin + 8, y + 13);
+        pdf.text('Vues', margin + 200, y + 13);
+        pdf.text('% du total', margin + 320, y + 13);
+        y += 20;
+        pdf.setFont('helvetica', 'normal'); pdf.setTextColor(26, 61, 31);
+        sortedPages.forEach(function(page, i) {
+          if (y + 16 > pageH - margin) { pdf.addPage(); y = margin + 6; }
+          if (i % 2 === 0) { pdf.setFillColor(244, 246, 240); pdf.rect(margin, y - 2, pageW - margin * 2, 16, 'F'); }
+          pdf.text(page, margin + 8, y + 10);
+          pdf.text(pageViews[page] + '', margin + 200, y + 10);
+          var pct = totalPV > 0 ? Math.round(pageViews[page] / totalPV * 100) : 0;
+          pdf.text(pct + '%', margin + 320, y + 10);
+          y += 16;
+        });
+        y += 8;
+      }
+
+      // ── Feature Clicks Table ──
+      if (y + 80 > pageH - margin) { pdf.addPage(); y = margin + 6; }
+      var featClicks = usage.featureClicks || {};
+      var sortedFeat = Object.keys(featClicks).sort(function(a,b){ return featClicks[b] - featClicks[a]; });
+      if (sortedFeat.length > 0) {
+        pdf.setFont('helvetica', 'bold'); pdf.setFontSize(14); pdf.setTextColor(26, 61, 31);
+        pdf.text('Détail Actions Utilisateur', margin, y); y += 16;
+        pdf.setFontSize(10); pdf.setFont('helvetica', 'bold');
+        pdf.setFillColor(25, 118, 210); pdf.rect(margin, y, pageW - margin * 2, 18, 'F');
+        pdf.setTextColor(255, 255, 255);
+        pdf.text('Action', margin + 8, y + 13);
+        pdf.text('Clics', margin + 250, y + 13);
+        y += 20;
+        pdf.setFont('helvetica', 'normal'); pdf.setTextColor(26, 61, 31);
+        sortedFeat.forEach(function(feat, i) {
+          if (y + 16 > pageH - margin) { pdf.addPage(); y = margin + 6; }
+          if (i % 2 === 0) { pdf.setFillColor(244, 246, 240); pdf.rect(margin, y - 2, pageW - margin * 2, 16, 'F'); }
+          pdf.text(feat, margin + 8, y + 10);
+          pdf.text(featClicks[feat] + '', margin + 250, y + 10);
+          y += 16;
+        });
+        y += 8;
+      }
+
+      // ── Sessions Summary ──
+      if (y + 60 > pageH - margin) { pdf.addPage(); y = margin + 6; }
+      var sessions = usage.sessions || [];
+      if (sessions.length > 0) {
+        pdf.setFont('helvetica', 'bold'); pdf.setFontSize(14); pdf.setTextColor(26, 61, 31);
+        pdf.text('Résumé Sessions', margin, y); y += 16;
+        pdf.setFontSize(10); pdf.setFont('helvetica', 'normal'); pdf.setTextColor(26, 61, 31);
+        var totalDuration = 0;
+        sessions.forEach(function(s) {
+          if (s.end && s.start) totalDuration += new Date(s.end) - new Date(s.start);
+        });
+        var avgMins = sessions.length > 0 ? Math.round(totalDuration / sessions.length / 60000) : 0;
+        var stats = [
+          'Sessions totales : ' + sessions.length,
+          'Durée totale : ' + Math.round(totalDuration / 60000) + ' min',
+          'Durée moyenne : ' + avgMins + ' min/session'
+        ];
+        stats.forEach(function(line) {
+          pdf.text(line, margin + 8, y + 10);
+          y += 16;
+        });
+        y += 8;
+      }
+
+      // ── Footer ──
+      if (y + 40 > pageH - margin) { pdf.addPage(); y = margin + 6; }
+      y += 10;
+      pdf.setDrawColor(45, 106, 53); pdf.setLineWidth(0.5);
+      pdf.line(margin, y, pageW - margin, y); y += 14;
+      pdf.setFontSize(8); pdf.setTextColor(150, 150, 150);
+      pdf.text('Généré par BIOZAR · ' + new Date().toLocaleString('fr-FR'), margin, y);
+
+      pdf.save('BIOZAR-Analytics-' + new Date().toISOString().slice(0,10) + '.pdf');
+    } catch(e) {
+      console.error('Erreur export analytics PDF:', e);
+    }
+    if (btn) btn.textContent = '📥 PDF';
+  }, 500);
 }
 
 function resetAnalytics() {
