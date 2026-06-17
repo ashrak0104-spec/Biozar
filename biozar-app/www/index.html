@@ -555,11 +555,13 @@
         <div class="admin-tab" onclick="showAdminTab('password')">🔑 Mot de Passe</div>
         <div class="admin-tab" onclick="showAdminTab('export')">📤 Export</div>
         <div class="admin-tab" onclick="showAdminTab('reset')">⚠️ Réinitialisation</div>
+        <div class="admin-tab" onclick="showAdminTab('cloud')">☁️ Cloud</div>
       </div>
       <div class="admin-tab-content active" id="tab-produits"><div class="card"><div class="card-header"><div><h3>🥦 Produits</h3></div><button class="btn-admin" onclick="addNewProduct()">+ Nouveau</button></div><div class="card-body" id="admin-products-list"></div></div></div>
       <div class="admin-tab-content" id="tab-charges"><div class="card"><div class="card-header"><div><h3>💸 Charges Mensuelles</h3></div></div><div class="card-body" id="admin-charges-list"></div></div></div>
       <div class="admin-tab-content" id="tab-password"><div class="card"><div class="card-header"><div><h3>🔑 Mot de Passe</h3></div></div><div class="card-body"><div class="form-group"><label>Nouveau mot de passe</label><input type="password" id="new-password" /></div><button class="btn-admin" onclick="changePassword()">Changer</button></div></div></div>
       <div class="admin-tab-content" id="tab-export"><div class="card"><div class="card-header"><div><h3>📤 Export / Import</h3></div></div><div class="card-body"><button class="export-btn" onclick="exportJSON()"><span class="export-icon">📥</span> Exporter toutes les données (JSON)</button><button class="export-btn" onclick="document.getElementById('importFile').click()"><span class="export-icon">📤</span> Importer des données (JSON)</button><input type="file" id="importFile" accept=".json" style="display:none" onchange="importJSON(event)" /></div></div></div>
+      <div class="admin-tab-content" id="tab-cloud"><div class="card"><div class="card-header"><div><h3>☁️ Historique de Synchronisation</h3><p>Dernières 20 synchronisations Supabase</p></div><span class="badge badge-green" id="cloud-sync-count">0 syncs</span></div><div class="card-body" style="padding:0"><table class="data-table"><thead><tr><th>Date</th><th>Heure</th><th>Taille</th><th>Statut</th></tr></thead><tbody id="sync-history-body"></tbody></table><div class="empty" id="sync-history-empty"><div class="empty-icon">☁️</div><p>Aucune synchronisation enregistrée.</p></div></div></div><div class="two-col"><div class="card"><div class="card-header"><div><h3>📊 Statistiques Cloud</h3></div></div><div class="card-body"><div id="cloud-stats"></div></div></div><div class="card"><div class="card-header"><div><h3>🔗 Connexion</h3></div></div><div class="card-body"><div id="cloud-connection-info"></div></div></div></div></div>
       <div class="admin-tab-content" id="tab-reset"><div class="card"><div class="card-header"><div><h3>⚠️ Réinitialisation</h3></div></div><div class="card-body"><div class="danger-zone"><h4>🗑️ Tout réinitialiser</h4><p>Cette action supprime toutes les données et ne peut pas être annulée.</p><button class="btn-danger" onclick="resetAllData()">🗑️ Réinitialiser toutes les données</button></div></div></div></div>
     </div>
 
@@ -672,7 +674,8 @@ let state = {
   seenIncidents: [],
   scenarios: [],
   autoExportConfig: { enabled: false, interval: 'weekly', lastExport: null },
-  prodThreshold: 80
+  prodThreshold: 80,
+  syncHistory: []
 };
 
 // ═══════════════════ HELPERS ═══════════════════
@@ -705,11 +708,19 @@ function closeSidebar() { document.getElementById('sidebar').classList.remove('o
 function saveState() {
   try {
     const s = JSON.parse(JSON.stringify(state));
-    delete s.user; delete s.role; delete s.password;
+    delete s.user; delete s.role; delete s.password; delete s.syncHistory;
     localStorage.setItem('biozar_state', JSON.stringify(s));
     if (window.BIOZAR_FIREBASE?.saveStateToFirestore) {
+      const sizeKb = (JSON.stringify(s).length / 1024).toFixed(1);
       updateCloudStatus('syncing');
-      window.BIOZAR_FIREBASE.saveStateToFirestore(s).then(() => updateCloudStatus('online')).catch(() => updateCloudStatus('offline'));
+      window.BIOZAR_FIREBASE.saveStateToFirestore(s).then(ok => {
+        updateCloudStatus('online');
+        if (state.syncHistory) {
+          state.syncHistory.push({ date: new Date().toISOString().slice(0,10), time: new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}), size: sizeKb + ' KB', status: ok ? 'ok' : 'error' });
+          if (state.syncHistory.length > 20) state.syncHistory = state.syncHistory.slice(-20);
+          try { localStorage.setItem('biozar_sync_history', JSON.stringify(state.syncHistory)); } catch(e) {}
+        }
+      }).catch(() => updateCloudStatus('offline'));
     }
   } catch(e) {}
 }
@@ -859,6 +870,7 @@ function renderAll() {
   renderIncidents();
   renderIntrants();
   renderChecklist();
+  renderSyncHistory();
   updateDashboardKPIs();
 }
 
@@ -1999,6 +2011,40 @@ function renderAdminCharges() {
 }
 
 function updateCharge(key, val) { state.charges[key] = parseFloat(val) || 0; saveState(); }
+function renderSyncHistory() {
+  var tbody = document.getElementById("sync-history-body");
+  var empty = document.getElementById("sync-history-empty");
+  var countBadge = document.getElementById("cloud-sync-count");
+  if (!tbody) return;
+  if ((!state.syncHistory || state.syncHistory.length === 0)) {
+
+  }
+  var history = (state.syncHistory || []).slice().reverse();
+  tbody.innerHTML = "";
+  if (countBadge) countBadge.textContent = history.length + " syncs";
+  if (history.length === 0) { if (empty) empty.style.display = "block"; return; }
+  if (empty) empty.style.display = "none";
+  history.slice(0, 20).forEach(function(h) {
+    var badge = h.status === "ok" ? "badge-green" : "badge-red";
+    var label = h.status === "ok" ? "✅ Succès" : "❌ Erreur";
+    var tr = document.createElement("tr");
+    tr.innerHTML = "<td>" + (h.date || "—") + "</td><td>" + (h.time || "—") + "</td><td>" + (h.size || "—") + "</td><td><span class="" + badge + "">" + label + "</span></td>";
+    tbody.appendChild(tr);
+  });
+  var statsEl = document.getElementById("cloud-stats");
+  if (statsEl) {
+    var okCount = history.filter(function(h){return h.status==="ok"}).length;
+    var errCount = history.filter(function(h){return h.status!=="ok"}).length;
+    var lastSync = history.length > 0 ? history[0].date + " " + history[0].time : "Jamais";
+    statsEl.innerHTML = "<div style="display:flex;flex-direction:column;gap:10px">" + "<div style="display:flex;justify-content:space-between;font-size:13px"><span>Succès</span><strong style="color:#2d6a35">" + okCount + "</strong></div>" + "<div style="display:flex;justify-content:space-between;font-size:13px"><span>Erreurs</span><strong>" + errCount + "</strong></div>" + "<div style="display:flex;justify-content:space-between;font-size:13px"><span>Dernière sync</span><strong>" + lastSync + "</strong></div>" + "<div style="display:flex;justify-content:space-between;font-size:13px"><span>Projet</span><strong>plavawidmbtryfyausjr</strong></div>" + "</div>";
+  }
+  var connEl = document.getElementById("cloud-connection-info");
+  if (connEl) {
+    var online = navigator.onLine;
+    var lastEntry = history.length > 0 ? history[0] : null;
+    connEl.innerHTML = "<div style="display:flex;flex-direction:column;gap:10px">" + "<div style="display:flex;justify-content:space-between;font-size:13px"><span>Statut</span><span>" + (online ? "🟢 En ligne" : "🔴 Hors-ligne") + "</span></div>" + "<div style="display:flex;justify-content:space-between;font-size:13px"><span>Provider</span><strong>Supabase</strong></div>" + "<div style="display:flex;justify-content:space-between;font-size:13px"><span>Dernière taille</span><strong>" + (lastEntry ? lastEntry.size : "—") + "</strong></div>" + "<div style="display:flex;justify-content:space-between;font-size:13px"><span>Version app</span><strong>v" + state.version + "</strong></div>" + "</div>";
+  }
+}
 function updateProdPrice(idx, val) { state.products[idx].price = parseFloat(val) || 0; saveState(); renderProducts(); }
 function updateProdCost(idx, val) { state.products[idx].cost = parseFloat(val) || 0; saveState(); renderProducts(); }
 function deleteProduct(idx) { if (confirm('Supprimer ' + state.products[idx].name + ' ?')) { state.products.splice(idx, 1); saveState(); renderAdminProducts(); renderProducts(); } }
