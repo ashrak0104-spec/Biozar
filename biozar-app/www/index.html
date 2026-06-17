@@ -732,7 +732,7 @@ function sendWhatsAppAlert(msg) {
   var phone = (state.whatsappPhone || '').replace(/[^0-9]/g, '');
   if (!phone) return;
   var url = 'https://wa.me/' + phone + '?text=' + encodeURIComponent(msg);
-  window.location.href = url;
+  try { window.open(url, '_blank'); } catch(e) { window.location.href = url; }
 }
 function showNotif(title, body) {
   state.notifications.push({ id: Date.now(), title: title, body: body || '', date: new Date().toISOString(), read: false });
@@ -1166,7 +1166,7 @@ function saveWhatsAppSettings() {
   var phone = document.getElementById('wa-phone') ? document.getElementById('wa-phone').value.trim() : '';
   var digits = phone.replace(/[^0-9]/g, '');
   if (phone && digits.length < 8) { showToast('Numéro trop court (min 8 chiffres).', 'error'); return; }
-  state.whatsappPhone = phone;
+  state.whatsappPhone = digits;
   saveState();
   showToast('Paramètres WhatsApp sauvegardés !');
 }
