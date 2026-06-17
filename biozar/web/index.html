@@ -2131,6 +2131,7 @@ function addChartToPDF(pdf, canvasId, title, margin, pageW, pageH, y, maxH) {
 }
 
 function exportAnalyticsPDF() {
+  initCharts();
   var btn = document.getElementById('btn-export-analytics');
   if (btn) btn.textContent = '⏳ Génération...';
   setTimeout(async function() {
