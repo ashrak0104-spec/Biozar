@@ -1138,7 +1138,7 @@ function renderYieldStats() {
   if (labels.length === 0) return;
   window._yieldChart = new Chart(canvas, {
     type: 'bar',
-    data: { labels, datasets: [{ label: 'Kg', data, backgroundColor: 'rgba(76,175,80,0.6)', borderColor: '#2d6a35', borderWidth: 1 }] },
+    data: { labels, datasets: [{ label: 'Kg', data, backgroundColor: getChartColors().greenFill, borderColor: '#2d6a35', borderWidth: 1 }] },
     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
   });
 }
@@ -1499,21 +1499,21 @@ function initCharts() {
     new Chart(tCanvas, {
       type: 'line', data: { labels: ['Juin','Juillet','Août','Sept','Oct','Nov'], datasets: [{
         label: 'Trésorerie', data: [500000, 1200000, 800000, 2000000, 1500000, 3000000],
-        borderColor: '#2d6a35', backgroundColor: 'rgba(45,106,53,0.1)', fill: true, tension: 0.4
+        borderColor: getChartColors().green, backgroundColor: getChartColors().greenFill, fill: true, tension: 0.4
       }] }, options: { responsive: true, maintainAspectRatio: false }
     });
   }
   const cCanvas = document.getElementById('chartClients');
   if (cCanvas) {
     new Chart(cCanvas, {
-      type: 'doughnut', data: { labels: ['Premium','Urbain','Santé','Distribution'], datasets: [{ data: [30, 25, 25, 20], backgroundColor: ['#2d6a35','#1976d2','#f9a825','#7b1fa2'] }] },
+      type: 'doughnut', data: { labels: ['Premium','Urbain','Santé','Distribution'], datasets: [{ data: [30, 25, 25, 20], backgroundColor: [getChartColors().green, getChartColors().blue, getChartColors().gold, getChartColors().purple] }] },
       options: { responsive: true, maintainAspectRatio: false }
     });
   }
   const ch = document.getElementById('chartCanaux');
   if (ch) {
     new Chart(ch, {
-      type: 'polarArea', data: { labels: ['Réseaux','Bouche-à-oreille','Visites','WhatsApp'], datasets: [{ data: [40, 25, 20, 15], backgroundColor: ['#4caf50','#f9a825','#1976d2','#7b1fa2'] }] },
+      type: 'polarArea', data: { labels: ['Réseaux','Bouche-à-oreille','Visites','WhatsApp'], datasets: [{ data: [40, 25, 20, 15], backgroundColor: [getChartColors().green, getChartColors().gold, getChartColors().blue, getChartColors().purple] }] },
       options: { responsive: true, maintainAspectRatio: false }
     });
   }
@@ -1522,7 +1522,7 @@ function initCharts() {
     new Chart(rCanvas, {
       type: 'radar', data: {
         labels: ['Eau','Nuisibles','Chaleur','Pluies','Marché','Transport'],
-        datasets: [{ label: 'Niveau de risque', data: [90, 80, 75, 50, 40, 30], backgroundColor: 'rgba(229,57,53,0.2)', borderColor: '#e53935', pointBackgroundColor: '#e53935' }]
+        datasets: [{ label: 'Niveau de risque', data: [90, 80, 75, 50, 40, 30], backgroundColor: getChartColors().redFill, borderColor: getChartColors().red, pointBackgroundColor: getChartColors().red }]
       }, options: { responsive: true, maintainAspectRatio: false, scales: { r: { min: 0, max: 100 } } }
     });
   }
@@ -1560,7 +1560,7 @@ function renderProductionTrend() {
   const data = labels.map(l => grouped[l]);
   if (labels.length === 0) return;
   window._prodTrend = new Chart(canvas, {
-    type: 'line', data: { labels, datasets: [{ label: 'Production (kg)', data, borderColor: '#2d6a35', backgroundColor: 'rgba(45,106,53,0.1)', fill: true, tension: 0.3 }] },
+    type: 'line', data: { labels, datasets: [{ label: 'Production (kg)', data, borderColor: getChartColors().green, backgroundColor: getChartColors().greenFill, fill: true, tension: 0.3 }] },
     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
   });
 }
@@ -1579,7 +1579,7 @@ function renderSalesTrend() {
   const data = labels.map(l => grouped[l]);
   if (labels.length === 0) return;
   window._salesTrend = new Chart(canvas, {
-    type: 'line', data: { labels, datasets: [{ label: 'Ventes (Ar)', data, borderColor: '#1976d2', backgroundColor: 'rgba(25,118,210,0.1)', fill: true, tension: 0.3 }] },
+    type: 'line', data: { labels, datasets: [{ label: 'Ventes (Ar)', data, borderColor: getChartColors().blue, backgroundColor: getChartColors().blueFill, fill: true, tension: 0.3 }] },
     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
   });
 }
@@ -1599,8 +1599,8 @@ function renderMonthlyComparison() {
   window._monthlyComp = new Chart(canvas, {
     type: 'bar', data: {
       labels, datasets: [
-        { label: 'Production (kg)', data: labels.map(l => prod[l]), backgroundColor: 'rgba(76,175,80,0.6)' },
-        { label: 'Ventes (Ar/1000)', data: labels.map(l => Math.round((ventes[l] || 0) / 1000)), backgroundColor: 'rgba(25,118,210,0.6)' }
+        { label: 'Production (kg)', data: labels.map(l => prod[l]), backgroundColor: getChartColors().greenFill },
+        { label: 'Ventes (Ar/1000)', data: labels.map(l => Math.round((ventes[l] || 0) / 1000)), backgroundColor: getChartColors().blueFill }
       ]
     }, options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: false } } }
   });
@@ -1615,7 +1615,7 @@ function renderTopProducts() {
   const sorted = Object.entries(grouped).sort((a, b) => b[1] - a[1]).slice(0, 8);
   if (sorted.length === 0) return;
   window._topProducts = new Chart(canvas, {
-    type: 'bar', data: { labels: sorted.map(s => s[0]), datasets: [{ label: 'Kg', data: sorted.map(s => s[1]), backgroundColor: 'rgba(76,175,80,0.6)' }] },
+    type: 'bar', data: { labels: sorted.map(s => s[0]), datasets: [{ label: 'Kg', data: sorted.map(s => s[1]), backgroundColor: getChartColors().greenFill }] },
     options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } } }
   });
 }
@@ -1729,8 +1729,8 @@ function renderProductionForecast() {
   window._fcast = new Chart(canvas, {
     type: 'line', data: {
       labels, datasets: [
-        { label: 'Historique', data: histData, borderColor: '#4caf50', backgroundColor: 'rgba(76,175,80,0.1)', fill: true, tension: 0.3, pointRadius: 4 },
-        { label: 'Prévision', data: fcastData, borderColor: '#f9a825', borderDash: [5, 5], backgroundColor: 'rgba(249,168,37,0.1)', fill: true, tension: 0.3, pointRadius: 4 }
+        { label: 'Historique', data: histData, borderColor: getChartColors().green, backgroundColor: getChartColors().greenFill, fill: true, tension: 0.3, pointRadius: 4 },
+        { label: 'Prévision', data: fcastData, borderColor: getChartColors().gold, borderDash: [5, 5], backgroundColor: getChartColors().goldFill, fill: true, tension: 0.3, pointRadius: 4 }
       ]
     }, options: { responsive: true, maintainAspectRatio: false }
   });
@@ -1786,7 +1786,7 @@ function renderSeasonalAnalysis() {
       byYear[y][mn] = (byYear[y][mn] || 0) + (monthly[m].reduce((a, b) => a + b, 0) / monthly[m].length);
     });
     window._seasChart = new Chart(canvas, {
-      type: 'line', data: { labels: monthNames, datasets: years.map((y, i) => ({ label: y, data: byYear[y], borderColor: ['#4caf50','#1976d2','#f9a825'][i], tension: 0.3 })) },
+      type: 'line', data: { labels: monthNames, datasets: years.map((y, i) => ({ label: y, data: byYear[y], borderColor: [getChartColors().green, getChartColors().blue, getChartColors().gold][i], tension: 0.3 })) },
       options: { responsive: true, maintainAspectRatio: false }
     });
   }
@@ -1841,9 +1841,9 @@ function renderScenarioSimulator() {
   window._simChart = new Chart(canvas, {
     type: 'line', data: {
       labels, datasets: [
-        { label: 'Historique', data: hist, borderColor: '#4caf50', tension: 0.3, pointRadius: 3 },
-        { label: 'Base', data: base, borderColor: '#f9a825', borderDash: [5, 5], tension: 0.3, pointRadius: 3 },
-        { label: 'Scénario', data: scenario, borderColor: '#1976d2', tension: 0.3, pointRadius: 3 }
+        { label: 'Historique', data: hist, borderColor: getChartColors().green, tension: 0.3, pointRadius: 3 },
+        { label: 'Base', data: base, borderColor: getChartColors().gold, borderDash: [5, 5], tension: 0.3, pointRadius: 3 },
+        { label: 'Scénario', data: scenario, borderColor: getChartColors().blue, tension: 0.3, pointRadius: 3 }
       ]
     }, options: { responsive: true, maintainAspectRatio: false }
   });
