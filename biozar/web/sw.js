@@ -3,7 +3,7 @@
    Stratégie : Cache First (app shell)
    ═══════════════════════════════════════ */
 
-const CACHE_NAME = 'biozar-v2';
+const CACHE_NAME = 'biozar-v3';
 
 // Ressources à pré-cacher au moment de l'installation
 const PRE_CACHE = [
