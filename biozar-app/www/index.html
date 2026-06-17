@@ -1204,7 +1204,7 @@ function addClient() {
   var newStatut = document.getElementById('c-statut').value;
   if (newStatut === 'Abonné') {
     showNotif('Nouvel abonné', nom + ' (' + (document.getElementById('c-seg').value) + ') est maintenant abonné !');
-    sendWhatsAppAlert('BIOZAR CRM : Nouvel abonné ! ' + nom + ' (' + (seg || '') + ') s\'est inscrit.');
+    sendWhatsAppAlert('BIOZAR CRM : Nouvel abonné ! ' + nom + ' (' + document.getElementById('c-seg').value + ') s\'est inscrit.');
   }
 }
 
