@@ -261,26 +261,7 @@
   </div>
 </div>
 
-<!-- LOGIN MODAL -->
-<div class="modal-overlay open" id="loginModal" style="background:var(--green-dark);z-index:9999">
-  <div class="modal-box">
-    <div class="modal-logo">
-      <div style="width:80px;height:80px;background:var(--green-pale);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:40px;margin:0 auto 12px">🌿</div>
-      <h2>BIOZAR</h2>
-      <p>Connexion à votre espace sécurisé</p>
-    </div>
-    <div class="modal-error" id="loginError">❌ Identifiant ou mot de passe incorrect.</div>
-    <div class="form-group" style="margin-bottom:12px">
-      <label>Identifiant</label>
-      <input type="text" id="loginUsername" placeholder="Ex: admin" onkeydown="if(event.key==='Enter')document.getElementById('loginPassword').focus()" />
-    </div>
-    <div class="form-group" style="margin-bottom:16px">
-      <label>Mot de passe</label>
-      <input type="password" id="loginPassword" placeholder="••••••••" onkeydown="if(event.key==='Enter')checkLogin()" />
-    </div>
-    <button class="btn-primary" style="width:100%" onclick="checkLogin()">🔓 Se connecter</button>
-  </div>
-</div>
+
 
 <!-- PRODUCT EDIT MODAL -->
 <div class="prod-modal-overlay" id="prodModal">
@@ -400,7 +381,7 @@
   <div class="sidebar-footer">
       <div id="user-info" style="padding:8px 12px;font-size:12px;color:var(--text-muted);border-top:1px solid var(--border);margin-bottom:4px"></div>
     <div class="cloud-status" id="cloud-status"><span class="cloud-dot online" id="cloud-dot"></span><span id="cloud-label">Cloud actif</span></div>
-    <button class="btn-outline" style="width:100%;border-color:var(--red);color:var(--red);font-weight:700" onclick="logout()">🚪 Déconnexion (<span id="currentUserLabel"></span>)</button>
+    <button class="btn-outline" style="width:100%;border-color:var(--red);color:var(--red);font-weight:700" onclick="doLogout()">🚪 Déconnexion (<span id="currentUserLabel"></span>)</button>
     <div class="sidebar-copy">BIOZAR © 2026</div>
   </div>
 </aside>
@@ -840,8 +821,10 @@ let state = {
   currentRole: null,
   users: [
     { login: 'admin', name: 'Admin Direction', role: 'admin', password: 'biozar2026' },
+    { login: 'jean', name: 'Jean Admin', role: 'admin', password: 'biozar2026' },
     { login: 'production', name: 'Chef Production', role: 'production', password: 'prod2026' },
     { login: 'commercial', name: 'Commercial', role: 'commercial', password: 'comm2026' },
+    { login: 'pascal', name: 'Pascal Commercial', role: 'commercial', password: 'comm2026' },
     { login: 'logistique', name: 'Logistique', role: 'logistics', password: 'logi2026' },
     { login: 'agent', name: 'Agent', role: 'operator', password: 'agent2026' },
   ],
@@ -1123,55 +1106,8 @@ function initCloudMonitor() {
   if (!navigator.onLine) updateCloudStatus('offline');
 }
 
-async function checkLogin() {
-  const u = document.getElementById('loginUsername').value.trim().toLowerCase();
-  const p = document.getElementById('loginPassword').value;
-  const error = document.getElementById('loginError');
-  if (!u || !p) { error.classList.add('show'); return; }
-  const hashed = await sha256(p);
-  if (hashed !== state.password && p !== state.password) { error.classList.add('show'); return; }
-  error.classList.remove('show');
-  state.user = u;
-  if (u === 'admin' || u === 'jean') state.role = 'admin';
-  else if (u === 'commercial' || u === 'pascal') state.role = 'commercial';
-  else state.role = 'production';
-  document.getElementById('loginModal').classList.remove('open');
-  document.getElementById('currentUserLabel').textContent = state.user;
-  document.body.classList.remove('locked');
-  document.body.className = 'role-' + state.role;
-  document.querySelectorAll('.requires-admin').forEach(e => e.style.display = state.role === 'admin' ? 'block' : 'none');
-  renderAll();
-  updateDate();
-  initCharts();
-  initCloudMonitor();
-  loadAutoExportConfig();
-  loadWhatsAppSettings();
-  applyTheme();
-  showToast('Bienvenue ' + state.user + ' !');
-  // Auto-request notification permission on first login
-  if ('Notification' in window && Notification.permission === 'default') {
-    setTimeout(function() { Notification.requestPermission(); }, 2000);
-  }
-  // Notify about unresolved incidents at login
-  setTimeout(function() {
-    var unresolved = (state.incidents || []).filter(function(i) { return !i.resolved; });
-    if (unresolved.length > 0) {
-      showNotif(unresolved.length + ' incident(s) non r\u00e9solu(s)', unresolved.map(function(i){ return i.type + ': ' + i.desc; }).join(' | '));
-    }
-  }, 3000);
-}
-
 function updateDate() {
   document.getElementById('topbar-date').textContent = new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-}
-
-function logout() {
-  state.user = null; state.role = null;
-  document.getElementById('loginModal').classList.add('open');
-  document.getElementById('loginPassword').value = '';
-  document.body.classList.add('locked');
-  document.body.classList.remove('role-admin', 'role-commercial', 'role-production');
-  document.getElementById('currentUserLabel').textContent = '';
 }
 
 // ═══════════════════ PAGE NAV ═══════════════════
@@ -1219,7 +1155,7 @@ function hideLoginScreen() {
 }
 
 function doLogin() {
-  var login = document.getElementById('login-user').value.trim();
+  var login = document.getElementById('login-user').value.trim().toLowerCase();
   var pass = document.getElementById('login-pass').value;
   var errEl = document.getElementById('login-error');
   if (!login || !pass) { errEl.textContent = 'Veuillez remplir tous les champs'; errEl.style.display = 'block'; return; }
@@ -1227,10 +1163,22 @@ function doLogin() {
   if (!user) { errEl.textContent = 'Login ou mot de passe incorrect'; errEl.style.display = 'block'; return; }
   state.currentUser = user;
   state.currentRole = user.role;
+  state.user = user.login;
+  state.role = user.role;
+  document.getElementById('currentUserLabel').textContent = user.name;
   saveState();
   var ls = document.getElementById('login-screen');
   if (ls) ls.style.display = 'none';
+  document.body.classList.remove('locked');
+  document.body.className = 'role-' + user.role;
   applyRoleAccess(user.role);
+  renderAll();
+  updateDate();
+  initCharts();
+  initCloudMonitor();
+  loadAutoExportConfig();
+  loadWhatsAppSettings();
+  applyTheme();
   showPage('dashboard');
   showToast('Bienvenue ' + user.name + ' !');
 }
@@ -1238,10 +1186,17 @@ function doLogin() {
 function doLogout() {
   state.currentUser = null;
   state.currentRole = null;
+  state.user = null;
+  state.role = null;
   saveState();
-  showLoginScreen();
+  var ls = document.getElementById('login-screen');
+  if (ls) ls.style.display = 'flex';
+  document.body.classList.add('locked');
+  document.body.classList.remove('role-admin', 'role-commercial', 'role-production', 'role-logistics', 'role-operator');
+  document.getElementById('currentUserLabel').textContent = '';
   document.getElementById('login-user').value = '';
   document.getElementById('login-pass').value = '';
+  showToast('Déconnexion réussie');
 }
 
 function applyRoleAccess(role) {

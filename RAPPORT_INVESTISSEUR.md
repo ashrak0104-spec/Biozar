@@ -8,16 +8,16 @@
 ### Accès en Ligne
 | Service | URL |
 |---------|-----|
-| **Application Web** | [https://biozar-010204.web.app](https://biozar-010204.web.app) |
-| **Console Firebase** | [https://console.firebase.google.com/project/biozar-010204/overview](https://console.firebase.google.com/project/biozar-010204/overview) |
+| **Application Web** | [https://biozar.pages.dev](https://biozar.pages.dev) (Cloudflare) |
+| **Console Supabase** | [https://supabase.com/dashboard/project/plavawidmbtryfyausjr](https://supabase.com/dashboard/project/plavawidmbtryfyausjr) |
 | **APK Android** | `biozar-v1.0.1-final.apk` (dans le dossier projet) |
 
 ### Identifiants de Démo
 | Rôle | Identifiant | Mot de passe |
 |------|-------------|--------------|
 | **Admin** (Jean) | `admin` ou `jean` | `biozar2026` |
-| **Commercial** | `commercial` ou `pascal` | `biozar2026` |
-| **Production** | (tout autre) | `biozar2026` |
+| **Commercial** | `commercial` ou `pascal` | `comm2026` |
+| **Production** | `production` | `prod2026` |
 
 ---
 
@@ -97,40 +97,38 @@
 
 ---
 
-## 🛠️ Stack Technique
+## 🛠️ Stack Technique (100% Gratuite)
 
-| Technologie | Usage |
-|-------------|-------|
-| **Firebase Hosting** | Hébergement web (HTTPS, CDN) |
-| **Firebase Firestore** | Base de données temps réel |
-| **Firebase Auth** | Authentification (optionnelle) |
-| **Firebase Functions** | API backend (Node.js 24) |
-| **PWA** | Service Worker, mode hors-ligne, installable |
-| **Capacitor** | Application Android native |
-| **Chart.js** | Graphiques interactifs |
-| **html2canvas + jsPDF** | Export PDF |
+| Technologie | Usage | Alternative Firebase (Migré) |
+|-------------|-------|------------------------------|
+| **Cloudflare Pages** | Hébergement web (HTTPS, CDN mondial) | *Firebase Hosting* |
+| **Supabase (PostgreSQL)** | Base de données cloud & Sync | *Firebase Firestore* |
+| **Supabase Auth** | Authentification sécurisée | *Firebase Auth* |
+| **Cloudflare Workers** | API backend (Edge Computing) | *Firebase Functions* |
+| **PWA** | Service Worker, mode hors-ligne, installable | - |
+| **Capacitor** | Application Android native | - |
+| **Chart.js** | Graphiques interactifs | - |
 
 ---
 
 ## 📈 Métriques Clés pour Investisseurs
 
+- **Coût d'infrastructure** : **0€/mois** (Migration optimisée)
 - **Marge brute moyenne** : +200 % sur les produits
 - **Segments clients** : 4 (Premium, Urbain, Santé, Distribution)
 - **Taux de croissance projeté** : Visible dans les prévisions
 - **Coûts mensuels** : ~5 000 000 Ar (paramétrable)
-- **Capacité de production** : Variable selon saison
 
 ---
 
 ## 🔜 Prochaines Étapes Recommandées
 
-1. **🔑 Activer Firebase Auth** dans la console Google pour la synchronisation cloud
-2. **💳 Passer au plan Blaze** (pay-as-you-go) pour déployer les Cloud Functions
-3. **📱 Publier l'APK Android** sur Google Play Store
-4. **🌐 Connecter un nom de domaine personnalisé** (ex: biozar.mg)
-5. **📊 Ajouter des données réelles** de production et clients
+1. **🚀 Déployer sur Cloudflare Pages** via GitHub pour une mise à jour automatique.
+2. **📱 Tester l'APK Android** sur un appareil réel pour valider les notifications.
+3. **🌐 Connecter un nom de domaine** personnalisé (ex: biozar.mg) via Cloudflare.
+4. **📊 Alimenter la base Supabase** avec les données réelles de la première récolte.
 
 ---
 
-*Rapport généré le ${new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}*
-*Projet BIOZAR © 2026 — Console de Pilotage v1.0.1*
+*Rapport généré le mercredi 17 juin 2026*
+*Projet BIOZAR © 2026 — Console de Pilotage v1.1.1*
