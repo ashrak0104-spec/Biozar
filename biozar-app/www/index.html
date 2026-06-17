@@ -688,18 +688,12 @@ function showToast(msg, type) {
   c.appendChild(t);
   setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 3000);
 }
-function showNotif(title, type) {
+function showNotif(title, body) {
   if (Notification.permission === 'granted') {
-    new Notification('BIOZAR - ' + title, { icon: '/manifest.json' });
+    var opts = { icon: 'icons/icon-192x192.png', badge: 'icons/icon-192x192.png', tag: 'biozar-' + Date.now(), renotify: true };
+    if (body) opts.body = String(body).slice(0, 200);
+    try { new Notification('BIOZAR - ' + title, opts); } catch(e) {}
   }
-}
-function download(filename, content, mime) {
-  const blob = new Blob([content], { type: mime || 'text/csv;charset=utf-8;' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(a.href);
 }
 function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('overlay').classList.toggle('open'); }
 function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('overlay').classList.remove('open'); }
@@ -822,6 +816,17 @@ async function checkLogin() {
   initCloudMonitor();
   loadAutoExportConfig();
   showToast('Bienvenue ' + state.user + ' !');
+  // Auto-request notification permission on first login
+  if ('Notification' in window && Notification.permission === 'default') {
+    setTimeout(function() { Notification.requestPermission(); }, 2000);
+  }
+  // Notify about unresolved incidents at login
+  setTimeout(function() {
+    var unresolved = (state.incidents || []).filter(function(i) { return !i.resolved; });
+    if (unresolved.length > 0) {
+      showNotif(unresolved.length + ' incident(s) non r\u00e9solu(s)', unresolved.map(function(i){ return i.type + ': ' + i.desc; }).join(' | '));
+    }
+  }, 3000);
 }
 
 function updateDate() {
@@ -923,6 +928,7 @@ function reportIncident() {
   document.getElementById('inc-desc').value = '';
   renderIncidents();
   showToast('Incident signalé !');
+  showNotif('Incident : ' + type, desc);
 }
 
 function renderIncidents() {
@@ -1044,6 +1050,7 @@ function checkProdThreshold() {
   if (weekly < threshold) {
     const banner = document.getElementById('prod-alert-banner');
     if (banner) { banner.textContent = '⚠️ Alerte : Production hebdo (' + weekly + ' kg) sous le seuil (' + threshold + ' kg)'; banner.style.display = 'block'; }
+    showNotif('Alerte production', 'Hebdo: ' + weekly + ' kg (seuil: ' + threshold + ' kg)');
   }
 }
 
