@@ -17,8 +17,8 @@
 */
 
 const supabaseConfig = {
-  url: 'https://plavawidmbtryfyausjr.supabase.co',
-  anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsYXZhd2lkbWJ0cnlmeWF1c2pyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MTk5OTMsImV4cCI6MjA5NjE5NTk5M30.C_l04kOX3ZqJ9O_j4nhokL7QaspRQY83Tpyn8XefNVk'
+  url: 'https://plavawidmbtryfyausjr.supabase.co/rest/v1/',
+  anonKey: 'votre-cle-anon-publique'
 };
 
 // ══════════════════════════════════════════════════════════════
@@ -159,56 +159,4 @@ if (isConfigured()) {
     'ℹ️ Supabase non configuré. Les données sont sauvegardées localement.',
     '\n   Pour activer la synergie cloud : https://supabase.com'
   );
-}
-// ==========================================
-// SYNCHRONISATION DE L'ÉTAT (SUPABASE)
-// ==========================================
-
-/**
- * Sauvegarde l'état complet de l'application dans Supabase
- * @param {Object} stateData - Un objet contenant toutes les variables à sauvegarder
- */
-async function saveAppState(stateData) {
-  try {
-    const { data, error } = await supabase
-      .from('biozar_state')
-      .upsert({ 
-        id: 'appState', 
-        data: stateData, 
-        updated_at: new Date().toISOString() 
-      }, { onConflict: 'id' });
-
-    if (error) throw error;
-    console.log("💾 État sauvegardé avec succès sur Supabase !");
-  } catch (error) {
-    console.error("❌ Erreur lors de la sauvegarde de l'état :", error.message);
-  }
-}
-
-/**
- * Récupère l'état sauvegardé depuis Supabase
- * @returns {Object|null} Les données de l'application ou null en cas d'absence
- */
-async function loadAppState() {
-  try {
-    const { data, error } = await supabase
-      .from('biozar_state')
-      .select('data')
-      .eq('id', 'appState')
-      .single();
-
-    if (error) {
-      if (error.code === 'PGRST116') {
-        console.log("ℹ️ Aucun état précédent trouvé. Initialisation par défaut.");
-        return null;
-      }
-      throw error;
-    }
-
-    console.log("📥 État chargé depuis Supabase :", data.data);
-    return data.data;
-  } catch (error) {
-    console.error("❌ Erreur lors du chargement de l'état :", error.message);
-    return null;
-  }
 }
