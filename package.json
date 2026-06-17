@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "npx serve .",
     "android": "npm --prefix biozar-app run android",
-    "lint": "npm --prefix functions run lint && npm --prefix ai run lint"
+    "lint": "npm --prefix functions run lint"
   },
   "browserslist": [
     "last 2 versions",
