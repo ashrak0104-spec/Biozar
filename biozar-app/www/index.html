@@ -565,21 +565,102 @@
 // ═══════════════════ STATE ═══════════════════
 let state = {
   version: '1.0.1',
-  productions: [],
-  clients: [],
+  productions: [
+    // --- Janvier 2026 ---
+    { date: '2026-01-12', name: 'Salade Bio', qty: 15, value: 45000 },
+    { date: '2026-01-16', name: 'Herbes Aromatiques', qty: 8, value: 16000 },
+    { date: '2026-01-19', name: 'Tomate Grade A', qty: 12, value: 60000 },
+    { date: '2026-01-26', name: 'Salade Bio', qty: 20, value: 60000 },
+    { date: '2026-01-30', name: 'Concombre', qty: 10, value: 35000 },
+    // --- Février 2026 ---
+    { date: '2026-02-02', name: 'Tomate Grade A', qty: 18, value: 90000 },
+    { date: '2026-02-06', name: 'Salade Bio', qty: 22, value: 66000 },
+    { date: '2026-02-09', name: 'Herbes Aromatiques', qty: 10, value: 20000 },
+    { date: '2026-02-13', name: 'Concombre', qty: 14, value: 49000 },
+    { date: '2026-02-16', name: 'Tomate Grade A', qty: 25, value: 125000 },
+    { date: '2026-02-20', name: 'Salade Bio', qty: 18, value: 54000 },
+    { date: '2026-02-23', name: 'Concombre', qty: 12, value: 42000 },
+    { date: '2026-02-27', name: 'Tomate Grade A', qty: 30, value: 150000 },
+    // --- Mars 2026 ---
+    { date: '2026-03-02', name: 'Salade Bio', qty: 25, value: 75000 },
+    { date: '2026-03-06', name: 'Herbes Aromatiques', qty: 12, value: 24000 },
+    { date: '2026-03-09', name: 'Tomate Grade A', qty: 35, value: 175000 },
+    { date: '2026-03-12', name: 'Concombre', qty: 18, value: 63000 },
+    { date: '2026-03-16', name: 'Salade Bio', qty: 30, value: 90000 },
+    { date: '2026-03-19', name: 'Tomate Grade A', qty: 40, value: 200000 },
+    { date: '2026-03-23', name: 'Concombre', qty: 22, value: 77000 },
+    { date: '2026-03-26', name: 'Herbes Aromatiques', qty: 15, value: 30000 },
+    { date: '2026-03-30', name: 'Salade Bio', qty: 28, value: 84000 },
+    // --- Avril 2026 ---
+    { date: '2026-04-02', name: 'Tomate Grade A', qty: 45, value: 225000 },
+    { date: '2026-04-06', name: 'Concombre', qty: 25, value: 87500 },
+    { date: '2026-04-09', name: 'Salade Bio', qty: 32, value: 96000 },
+    { date: '2026-04-13', name: 'Tomate Grade A', qty: 50, value: 250000 },
+    { date: '2026-04-16', name: 'Herbes Aromatiques', qty: 18, value: 36000 },
+    { date: '2026-04-20', name: 'Concombre', qty: 28, value: 98000 },
+    { date: '2026-04-23', name: 'Salade Bio', qty: 35, value: 105000 },
+    { date: '2026-04-27', name: 'Tomate Grade A', qty: 55, value: 275000 },
+    { date: '2026-04-30', name: 'Concombre', qty: 30, value: 105000 },
+    // --- Mai 2026 ---
+    { date: '2026-05-04', name: 'Tomate Grade A', qty: 48, value: 240000 },
+    { date: '2026-05-07', name: 'Salade Bio', qty: 38, value: 114000 },
+    { date: '2026-05-11', name: 'Herbes Aromatiques', qty: 20, value: 40000 },
+    { date: '2026-05-14', name: 'Concombre', qty: 32, value: 112000 },
+    { date: '2026-05-18', name: 'Tomate Grade A', qty: 52, value: 260000 },
+    { date: '2026-05-21', name: 'Salade Bio', qty: 40, value: 120000 },
+    { date: '2026-05-25', name: 'Concombre', qty: 35, value: 122500 },
+    { date: '2026-05-28', name: 'Tomate Grade A', qty: 60, value: 300000 },
+    // --- Début Juin 2026 ---
+    { date: '2026-06-01', name: 'Salade Bio', qty: 42, value: 126000 },
+    { date: '2026-06-03', name: 'Tomate Grade A', qty: 55, value: 275000 },
+  ],
+  clients: [
+    { nom: 'Hôtel Royal Palissandre', etab: 'Royal Palissandre', tel: '+261 32 12 345 67', seg: 'Restauration Premium', statut: 'Abonné', note: 'Commande hebdo 20 kg', added: '2026-01-15' },
+    { nom: 'Hôtel Montagne d\'Ambre', etab: 'Montagne d\'Ambre Lodge', tel: '+261 34 56 789 01', seg: 'Restauration Premium', statut: 'Client ponctuel', note: 'Contrat annuel en vue', added: '2026-02-10' },
+    { nom: 'Le Jardin d\'Ankify', etab: 'Restaurant Le Jardin', tel: '+261 33 78 901 23', seg: 'Restauration Urbaine', statut: 'Abonné', note: 'Commande bio 3x/sem', added: '2026-01-20' },
+    { nom: 'Restaurant Le Pili-Pili', etab: 'Le Pili-Pili', tel: '+261 32 45 678 90', seg: 'Restauration Urbaine', statut: 'Échantillon déposé', note: 'Test en cours', added: '2026-03-05' },
+    { nom: 'Chez Gaspard', etab: 'Chez Gaspard', tel: '+261 34 12 345 67', seg: 'Restauration Urbaine', statut: 'Client ponctuel', note: 'Achats réguliers en saison', added: '2026-02-28' },
+    { nom: 'Miora Soa', etab: 'Traiteur Miora', tel: '+261 33 56 789 01', seg: 'Consommateurs Santé', statut: 'Abonné', note: 'Panier hebdo 10 kg', added: '2026-01-25' },
+    { nom: 'Biolove Market', etab: 'Biolove', tel: '+261 32 78 901 23', seg: 'Distribution Sélective', statut: 'Échantillon déposé', note: 'Distributeur potentiel', added: '2026-03-12' },
+    { nom: 'Épicerie d\'Antsiranana', etab: 'Épicerie Centre', tel: '+261 34 90 123 45', seg: 'Distribution Sélective', statut: 'En prospection', note: 'À relancer pour démo', added: '2026-04-08' },
+    { nom: 'Les Jardins d\'Analamena', etab: 'Analamena Resort', tel: '+261 33 23 456 78', seg: 'Consommateurs Santé', statut: 'Abonné', note: 'Commande mensuelle 50 kg', added: '2026-02-01' },
+    { nom: 'Splendid Hôtel', etab: 'Splendid Hôtel Nosy Be', tel: '+261 32 67 890 12', seg: 'Restauration Premium', statut: 'En prospection', note: 'Gros potentiel, viser contrat', added: '2026-04-15' },
+    { nom: 'Résidence Mahavoky', etab: 'Résidence Mahavoky', tel: '+261 34 45 678 90', seg: 'Consommateurs Santé', statut: 'Client ponctuel', note: 'Qualité appréciée', added: '2026-03-20' },
+    { nom: 'Marché Bio du Nord', etab: 'Marché Bio', tel: '+261 33 89 012 34', seg: 'Distribution Sélective', statut: 'En prospection', note: 'Distributeur à former', added: '2026-05-02' },
+  ],
   products: [
     { emoji: '🍅', name: 'Tomate Grade A', price: 5000, cost: 1500, target: 'Restauration Premium' },
     { emoji: '🥬', name: 'Salade Bio', price: 3000, cost: 800, target: 'Consommateurs Santé' },
     { emoji: '🥒', name: 'Concombre', price: 3500, cost: 1000, target: 'Restauration Urbaine' },
-    { emoji: '🌿', name: 'Herbes Aromatiques', price: 2000, cost: 500, target: 'Distribution Sélective' }
+    { emoji: '🌿', name: 'Herbes Aromatiques', price: 2000, cost: 500, target: 'Distribution Sélective' },
+    { emoji: '🫑', name: 'Poivron Bio', price: 4500, cost: 1500, target: 'Restauration Premium' },
+    { emoji: '🥕', name: 'Carotte Bio', price: 2500, cost: 800, target: 'Consommateurs Santé' },
   ],
   charges: { loyer: 800000, salaires: 2500000, eau: 300000, electricite: 200000, intrants: 400000, transport: 350000, marketing: 250000, autres: 150000 },
-  tresorerie: [],
+  tresorerie: [
+    { mois: 'Juin', entree: 0, sortie: 4950000 },
+    { mois: 'Juillet', entree: 3000000, sortie: 4950000 },
+    { mois: 'Août', entree: 5800000, sortie: 4950000 },
+    { mois: 'Septembre', entree: 8200000, sortie: 4950000 },
+    { mois: 'Octobre', entree: 10500000, sortie: 4950000 },
+    { mois: 'Novembre', entree: 12500000, sortie: 4950000 },
+  ],
   user: null,
   role: null,
   password: 'biozar2026',
-  incidents: [],
-  intrants: [],
+  incidents: [
+    { id: 1717000000001, type: '💧 Irrigation', desc: 'Pompe principale en panne - secteur Est', date: '2026-03-15', resolved: true, reportedBy: 'jean' },
+    { id: 1717000000002, type: '🦟 Nuisibles', desc: 'Apparition pucerons sur parcelle tomates', date: '2026-04-02', resolved: true, reportedBy: 'jean' },
+    { id: 1717000000003, type: '🌡️ Chaleur', desc: 'Température > 38°C - stress hydrique détecté', date: '2026-05-20', resolved: false, reportedBy: 'jean' },
+  ],
+  intrants: [
+    { name: 'Compost Bio', status: 'ok' },
+    { name: 'Biopesticide Neem', status: 'low' },
+    { name: 'Semences Tomate', status: 'ok' },
+    { name: 'Semences Salade', status: 'ok' },
+    { name: 'Paillage Biodégradable', status: 'out' },
+    { name: 'Tuteurs Bois', status: 'low' },
+  ],
   checklist: [],
   seenIncidents: [],
   scenarios: [],
@@ -624,17 +705,35 @@ function saveState() {
     }
   } catch(e) {}
 }
+function mergeStateWithDefaults(saved, defaults) {
+  const result = JSON.parse(JSON.stringify(defaults));
+  if (!saved) return result;
+  Object.keys(saved).forEach(key => {
+    if (key === 'user' || key === 'role' || key === 'password') return;
+    if (Array.isArray(saved[key])) {
+      if (saved[key].length > 0) result[key] = saved[key];
+    } else if (typeof saved[key] === 'object' && saved[key] !== null) {
+      result[key] = { ...(result[key] || {}), ...saved[key] };
+    } else {
+      result[key] = saved[key];
+    }
+  });
+  return result;
+}
+
 async function loadState() {
   try {
     const saved = localStorage.getItem('biozar_state');
     if (saved) {
       const s = JSON.parse(saved);
-      Object.assign(state, s);
+      const merged = mergeStateWithDefaults(s, state);
+      Object.assign(state, merged);
     }
     if (window.BIOZAR_FIREBASE?.loadStateFromFirestore) {
       const remote = await window.BIOZAR_FIREBASE.loadStateFromFirestore();
       if (remote && remote.state) {
-        Object.assign(state, remote.state);
+        const merged = mergeStateWithDefaults(remote.state, state);
+        Object.assign(state, merged);
         if (typeof renderAll === 'function') renderAll();
       }
     }
@@ -1111,7 +1210,7 @@ function initCharts() {
   renderSalesTrend();
   renderMonthlyComparison();
   renderTopProducts();
-  renderForecastChart();
+  renderProductionForecast();
 }
 
 // ═══════════════════ REPORTING ═══════════════════

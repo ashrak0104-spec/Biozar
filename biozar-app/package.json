@@ -5,8 +5,9 @@
   "description": "BIOZAR - Console de Pilotage Bio Madagascar",
   "main": "index.js",
   "scripts": {
-    "build": "npm run sync",
+    "build": "npm run copy-web && npx cap sync",
     "sync": "npx cap sync",
+    "copy-web": "node -e \"const{cpSync,rmSync,existsSync}=require('fs');const{join}=require('path');const src=join(__dirname,'..','biozar','web');const dst=join(__dirname,'www');if(!existsSync(src)){console.error('Erreur: biozar/web/ introuvable');process.exit(1)}['index.html','chart.js','supabase-init.js','sw.js','version.json','manifest.json'].forEach(f=>cpSync(join(src,f),join(dst,f),{force:true}));const iconsDst=join(dst,'icons');if(existsSync(iconsDst))rmSync(iconsDst,{recursive:true});cpSync(join(src,'icons'),iconsDst,{recursive:true});console.log('✓ Web files synced from biozar/web/')",
     "android": "npx cap open android",
     "add-android": "npx cap add android"
   },

@@ -35,5 +35,6 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           # Répertoire racine du site statique (pas de build)
-          command: pages deploy . --project-name=biozar
+          # Les fichiers web sont dans biozar/web/
+          command: pages deploy biozar/web --project-name=biozar
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}

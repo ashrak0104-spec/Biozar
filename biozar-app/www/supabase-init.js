@@ -17,8 +17,8 @@
 */
 
 const supabaseConfig = {
-  url: 'https://VOTRE_PROJET.supabase.co',
-  anonKey: 'votre-cle-anon-publique'
+  url: 'https://yxqikcxpcdazruekeunc.supabase.co',
+  anonKey: 'sb_publishable_KjlUVECekEaUNSIzgj4qSA_cutT46Lx'
 };
 
 // ══════════════════════════════════════════════════════════════

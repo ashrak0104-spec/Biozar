@@ -23,7 +23,7 @@ const FONT_URLS = [
   'https://fonts.gstatic.com/'
 ];
 
-// CDN Libraries (PDF export)
+// CDN Libraries (PDF, export)
 const CDN_CACHE = 'biozar-cdn-v2';
 const CDN_URLS = [
   'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
@@ -36,7 +36,7 @@ self.addEventListener('install', event => {
     (async () => {
       const cache = await caches.open(CACHE_NAME);
       await cache.addAll(PRE_CACHE);
-      // Pré-cache des CDN
+      // Pré-cache des CDN (html2canvas, jsPDF)
       try {
         const cdnCache = await caches.open(CDN_CACHE);
         await cdnCache.addAll(CDN_URLS);
@@ -157,6 +157,7 @@ self.addEventListener('fetch', event => {
     event.respondWith(cacheFirst(request, FONT_CACHE));
     return;
   }
+
 
   // ═══ APP SHELL (HTML, JS, CSS, images locales) : Cache First ───
   if (
