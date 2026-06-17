@@ -18,6 +18,25 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
   <style>
     :root{--green-dark:#1a3d1f;--green-mid:#2d6a35;--green-light:#4caf50;--green-pale:#e8f5e9;--green-glow:#81c784;--gold:#f9a825;--gold-light:#fff8e1;--red:#e53935;--red-light:#ffebee;--blue:#1976d2;--blue-light:#e3f2fd;--purple:#7b1fa2;--purple-light:#f3e5f5;--bg:#f4f6f0;--surface:#fff;--border:#dde8dd;--text:#1c2b1e;--text-muted:#5a7060;--sidebar-w:260px;--radius:16px;--shadow:0 4px 24px rgba(26,61,31,.10);--shadow-lg:0 8px 40px rgba(26,61,31,.16)}
+    [data-theme='dark']{--bg:#111a13;--surface:#1a2619;--border:#2a3d2c;--text:#e0e8e1;--text-muted:#8fa89a;--green-pale:#1a2e1c;--red-light:#2e1a1a;--blue-light:#1a2430;--purple-light:#241a2e;--gold-light:#2e2a1a;--shadow:0 4px 24px rgba(0,0,0,.3);--shadow-lg:0 8px 40px rgba(0,0,0,.4)}
+    [data-theme='dark'] .sidebar{background:linear-gradient(180deg,#0a120c 0%,#050a06 100%)}
+    [data-theme='dark'] .topbar{background:var(--surface);border-color:var(--border)}
+    [data-theme='dark'] .card{background:var(--surface);border-color:var(--border)}
+    [data-theme='dark'] input,[data-theme='dark'] select,[data-theme='dark'] textarea{background:var(--bg);color:var(--text);border-color:var(--border)}
+    [data-theme='dark'] .data-table th{background:var(--bg);color:var(--text-muted)}
+    [data-theme='dark'] .data-table td{border-color:var(--border)}
+    [data-theme='dark'] .danger-zone{background:var(--red-light);border-color:var(--red)}
+    [data-theme='dark'] .modal{background:var(--surface)}
+    [data-theme='dark'] canvas{background:var(--surface);border-radius:8px}
+    [data-theme='dark'] .badge{border:1px solid var(--border)}
+    [data-theme='dark'] .toast{background:var(--surface);color:var(--text);border:1px solid var(--border)}
+    [data-theme='dark'] .toast.error{background:#3e1a1a;color:var(--red)}
+    [data-theme='dark'] .nav-item:hover{background:rgba(255,255,255,.12)}
+    [data-theme='dark'] .section-header p{color:var(--text-muted)}
+    [data-theme='dark'] .empty p{color:var(--text-muted)}
+    [data-theme='dark'] .admin-tab{background:var(--surface);border-color:var(--border);color:var(--text-muted)}
+    [data-theme='dark'] .admin-tab.active{background:linear-gradient(135deg,var(--green-mid),var(--green-light));color:#fff;border-color:transparent}
+    html{transition:background .3s,color .3s}
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);display:flex;min-height:100vh;overflow-x:hidden}
     .sidebar{width:var(--sidebar-w);background:linear-gradient(180deg,var(--green-dark) 0%,#0f2612 100%);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;box-shadow:4px 0 24px rgba(0,0,0,.25);transition:transform .3s ease}
@@ -367,6 +386,7 @@
     <div class="topbar-right">
       <div class="topbar-date" id="topbar-date"></div>
       <div class="topbar-badge">🌿 100% Bio</div>
+      <button id="dark-toggle" onclick="toggleDarkMode()" style="background:var(--green-pale);color:var(--green-mid);border:none;border-radius:20px;padding:6px 14px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px">🌙</button>
       <button id="notif-badge" onclick="requestNotifPermission()" style="background:var(--green-pale);color:var(--green-mid);border:none;border-radius:20px;padding:6px 14px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px">🔔</button>
     </div>
   </div>
@@ -849,6 +869,7 @@ async function loadState() {
         if (typeof renderAll === 'function') renderAll();
       }
     }
+    applyTheme();
   } catch(e) {}
   const stored = localStorage.getItem('biozar_password');
   if (stored) state.password = stored;
@@ -915,6 +936,7 @@ async function checkLogin() {
   initCloudMonitor();
   loadAutoExportConfig();
   loadWhatsAppSettings();
+  applyTheme();
   showToast('Bienvenue ' + state.user + ' !');
   // Auto-request notification permission on first login
   if ('Notification' in window && Notification.permission === 'default') {
