@@ -1201,6 +1201,11 @@ function addClient() {
   document.getElementById('c-nom').value = ''; document.getElementById('c-etab').value = ''; document.getElementById('c-tel').value = ''; document.getElementById('c-note').value = '';
   renderClients();
   showToast(nom + ' ajouté !');
+  var newStatut = document.getElementById('c-statut').value;
+  if (newStatut === 'Abonné') {
+    showNotif('Nouvel abonné', nom + ' (' + (document.getElementById('c-seg').value) + ') est maintenant abonné !');
+    sendWhatsAppAlert('BIOZAR CRM : Nouvel abonné ! ' + nom + ' (' + (seg || '') + ') s\'est inscrit.');
+  }
 }
 
 function deleteClient(idx) {
@@ -1264,8 +1269,22 @@ function saveClient() {
   saveState();
   document.getElementById('clientModal').classList.remove('open');
   renderClients();
+  var oldStatut = c.statut;
   showToast('Contact mis à jour !');
+  var newStatut = c.statut;
+  if (newStatut !== oldStatut) {
+    if (newStatut === 'Abonné') {
+      showNotif('Nouvel abonné', c.nom + ' est maintenant abonné ! (était : ' + oldStatut + ')');
+      sendWhatsAppAlert('BIOZAR CRM : ' + c.nom + ' est maintenant abonné ! Ancien statut : ' + oldStatut);
+    } else if (oldStatut === 'Abonné' && newStatut !== 'Abonné') {
+      showNotif('Désabonnement', c.nom + ' n'est plus abonné (maintenant : ' + newStatut + ')');
+    } else if (oldStatut === 'Inactif' && newStatut !== 'Inactif') {
+      showNotif('Réactivation', c.nom + ' est réactivé ! (maintenant : ' + newStatut + ')');
+    }
+  }
 }
+
+function switchCrmT
 
 function switchCrmTab(tab) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
