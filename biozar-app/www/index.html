@@ -606,6 +606,7 @@
     <div class="page" id="page-analytics">
       <div class="section-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
         <div><h2>📈 Analytics & Usage</h2><p>Métriques d'utilisation de l'application</p></div>
+        <button id="btn-export-usage-csv" class="btn-admin" onclick="exportUsageCSV()" style="padding:10px 18px;font-size:13px;white-space:nowrap">📊 CSV</button>
         <button id="btn-export-usage-pdf" class="btn-primary" onclick="exportUsagePDF()" style="padding:10px 18px;font-size:13px;white-space:nowrap">📥 PDF</button>
         <button id="btn-reset-analytics" class="btn-admin" onclick="resetAnalytics()" style="padding:10px 18px;font-size:13px;white-space:nowrap">🔄 Reset</button>
       </div>
@@ -1116,6 +1117,99 @@ function endSession() {
   }
 }
 
+
+
+function exportUsageCSV() {
+  trackFeatureClick("exportCSV-analytics");
+  var usage = state.appUsage || {};
+  var lines = [];
+  
+  // Header
+  lines.push('BIOZAR Analytics Export');
+  lines.push('Date;Valeur');
+  lines.push(new Date().toLocaleDateString('fr-FR') + ';' + new Date().toLocaleTimeString('fr-FR'));
+  lines.push('');
+  
+  // KPIs
+  var totalPV = Object.values(usage.pageViews || {}).reduce(function(a,b){return a+b;}, 0);
+  var totalFeat = Object.values(usage.featureClicks || {}).reduce(function(a,b){return a+b;}, 0);
+  lines.push('=== INDCATEURS CLES ===');
+  lines.push('Metrique;Valeur');
+  lines.push('Vues totales;' + totalPV);
+  lines.push('Pages visitees;' + Object.keys(usage.pageViews || {}).length);
+  lines.push('Actions effectuees;' + totalFeat);
+  lines.push('Sessions totales;' + (usage.sessionCount || 0));
+  lines.push('Premiere visite;' + (usage.firstVisit || ''));
+  lines.push('Fonctions trackees;' + Object.keys(usage.featureClicks || {}).length);
+  lines.push('');
+  
+  // Page views detail
+  lines.push('=== VUES PAR PAGE ===');
+  lines.push('Page;Vues;Pourcentage');
+  var sortedPages = Object.keys(usage.pageViews || {}).sort(function(a,b){ return (usage.pageViews[b]||0) - (usage.pageViews[a]||0); });
+  sortedPages.forEach(function(page) {
+    var pct = totalPV > 0 ? Math.round(usage.pageViews[page] / totalPV * 100) : 0;
+    lines.push(page + ';' + usage.pageViews[page] + ';' + pct + '%');
+  });
+  lines.push('');
+  
+  // Feature clicks detail
+  lines.push('=== ACTIONS UTILISATEUR ===');
+  lines.push('Action;Clics');
+  var sortedFeat = Object.keys(usage.featureClicks || {}).sort(function(a,b){ return (usage.featureClicks[b]||0) - (usage.featureClicks[a]||0); });
+  sortedFeat.forEach(function(feat) {
+    lines.push(feat + ';' + usage.featureClicks[feat]);
+  });
+  lines.push('');
+  
+  // Daily activity
+  lines.push('=== ACTIVITE QUOTIDIENNE ===');
+  lines.push('Date;Actions');
+  var days = [];
+  for (var i = 29; i >= 0; i--) {
+    var d = new Date(); d.setDate(d.getDate() - i);
+    var dayStr = d.toISOString().slice(0,10);
+    var count = (usage.dailyActive || {})[dayStr] || 0;
+    if (count > 0) days.push(dayStr + ';' + count);
+  }
+  lines = lines.concat(days);
+  lines.push('');
+  
+  // Sessions
+  lines.push('=== SESSIONS ===');
+  lines.push('Date;Heure debut;Heure fin;Duree');
+  var sessions = (usage.sessions || []).slice(-50);
+  sessions.forEach(function(s) {
+    var start = new Date(s.start);
+    var startTime = start.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
+    var endTime = '';
+    var duration = '';
+    if (s.end) {
+      var end = new Date(s.end);
+      endTime = end.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
+      var ms = end - start;
+      var mins = Math.floor(ms / 60000);
+      var secs = Math.floor((ms % 60000) / 1000);
+      duration = mins + 'm ' + secs + 's';
+    } else {
+      endTime = 'En cours';
+      duration = '—';
+    }
+    lines.push(s.date + ';' + startTime + ';' + endTime + ';' + duration);
+  });
+  
+  // Download
+  var csv = lines.join('
+');
+  var blob = new Blob([﻿ + csv], { type: 'text/csv;charset=utf-8;' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'BIOZAR-Analytics-' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('CSV exporté !');
+}
 
 function exportUsagePDF() {
   renderAnalytics();
