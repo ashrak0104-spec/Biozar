@@ -774,8 +774,15 @@ function updateCloudStatus(status) {
   label.textContent = labels[status] || status;
 }
 function initCloudMonitor() {
-  window.addEventListener('online', () => updateCloudStatus('online'));
-  window.addEventListener('offline', () => updateCloudStatus('offline'));
+  window.addEventListener('online', () => {
+    updateCloudStatus('online');
+    showToast('Reconnexion ! Sync en cours...');
+    saveState();
+  });
+  window.addEventListener('offline', () => {
+    updateCloudStatus('offline');
+    showToast('Mode hors-ligne — les données seront sauvegardées localement', 'error');
+  });
   if (!navigator.onLine) updateCloudStatus('offline');
 }
 
