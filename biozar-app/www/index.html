@@ -409,9 +409,9 @@
     <div class="page" id="page-clients">
       <div class="section-header"><h2>👥 Clients & Prospects</h2></div>
       <div style="display:flex;gap:8px;margin-bottom:20px;border-bottom:1px solid var(--border);padding-bottom:8px">
-        <button class="tab-btn active" onclick="switchCrmTab('contacts')">📋 Contacts</button>
-        <button class="tab-btn" onclick="switchCrmTab('pipeline')">📈 Pipeline</button>
-        <button class="tab-btn" onclick="switchCrmTab('campaigns')">🚀 Campagnes</button>
+        <button class="tab-btn active" id="crm-tab-contacts" onclick="switchCrmTab('contacts')">📋 Contacts</button>
+        <button class="tab-btn" id="crm-tab-pipeline" onclick="switchCrmTab('pipeline')">📈 Pipeline</button>
+        <button class="tab-btn" id="crm-tab-campaigns" onclick="switchCrmTab('campaigns')">🚀 Campagnes</button>
       </div>
       <div id="crm-contacts-section">
         <div class="kpi-grid"><div class="kpi-card green"><div class="kpi-icon">🏨</div><div class="kpi-value">Hôtels</div><div class="kpi-label">Premium</div></div><div class="kpi-card blue"><div class="kpi-icon">🍽️</div><div class="kpi-value">Restaurants</div><div class="kpi-label">Urbain</div></div><div class="kpi-card gold"><div class="kpi-icon">🏠</div><div class="kpi-value">Particuliers</div><div class="kpi-label">Abonnés</div></div><div class="kpi-card red"><div class="kpi-icon">🛒</div><div class="kpi-value">Épiceries</div><div class="kpi-label">Distribution</div></div></div>
@@ -701,7 +701,7 @@ function saveState() {
     delete s.user; delete s.role; delete s.password;
     localStorage.setItem('biozar_state', JSON.stringify(s));
     if (window.BIOZAR_FIREBASE?.saveStateToFirestore) {
-      window.BIOZAR_FIREBASE.saveStateToFirestore(s);
+      window.BIOZAR_FIREBASE.saveStateToFirestore(s).catch(err => console.warn("[BIOZAR] Sync:", err));
     }
   } catch(e) {}
 }
@@ -749,12 +749,20 @@ async function loadState() {
 }
 
 // ═══════════════════ LOGIN ═══════════════════
-function checkLogin() {
+async function sha256(message) {
+  const msgBuffer = new TextEncoder().encode(message);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function checkLogin() {
   const u = document.getElementById('loginUsername').value.trim().toLowerCase();
   const p = document.getElementById('loginPassword').value;
   const error = document.getElementById('loginError');
   if (!u || !p) { error.classList.add('show'); return; }
-  if (p !== state.password) { error.classList.add('show'); return; }
+  const hashed = await sha256(p);
+  if (hashed !== state.password && p !== state.password) { error.classList.add('show'); return; }
   error.classList.remove('show');
   state.user = u;
   if (u === 'admin' || u === 'jean') state.role = 'admin';
@@ -857,7 +865,7 @@ function renderProductionLog() {
   empty.style.display = 'none';
   prods.forEach((p, i) => {
     const tr = document.createElement('tr');
-    tr.innerHTML = '<td>' + p.date + '</td><td>' + p.name + '</td><td>' + p.qty + ' kg</td><td class="hide-production">' + (p.value || 0).toLocaleString() + ' Ar</td>';
+    tr.innerHTML = '<td>' + p.date + '</td><td>' + p.name + '</td><td>' + p.qty + ' kg</td><td class="hide-production">' + (p.value || 0).toLocaleString() + ' Ar</td><td><button class="btn-danger" onclick="deleteProduction(' + (state.productions.length - 1 - i) + ')" style="padding:2px 6px;font-size:10px">🗑️</button></td>';
     tbody.appendChild(tr);
   });
 }
@@ -914,49 +922,69 @@ function renderYieldStats() {
 function renderChecklist() {
   const list = document.getElementById('checklist-tasks-list');
   if (!list) return;
-  const tasks = [
-    { id: 1, label: 'Préparer les planches de culture', done: false },
-    { id: 2, label: 'Vérifier le système d\'irrigation', done: false },
-    { id: 3, label: 'Appliquer le compost', done: false },
-    { id: 4, label: 'Inspecter les plants', done: false }
-  ];
+  if (!state.checklist || state.checklist.length === 0) {
+    state.checklist = [
+      { id: 1, label: 'Préparer les planches de culture', done: false },
+      { id: 2, label: 'Vérifier le système d\'irrigation', done: false },
+      { id: 3, label: 'Appliquer le compost', done: false },
+      { id: 4, label: 'Inspecter les plants', done: false }
+    ];
+    saveState();
+  }
   list.innerHTML = '';
-  const done = tasks.filter(t => t.done).length;
-  tasks.forEach(t => {
+  const done = state.checklist.filter(t => t.done).length;
+  const progress = state.checklist.length > 0 ? Math.round(done / state.checklist.length * 100) : 0;
+  const header = document.createElement('div');
+  header.style.cssText = 'margin-bottom:10px;font-size:12px;font-weight:600;color:var(--text-muted)';
+  header.textContent = done + '/' + state.checklist.length + ' (' + progress + '%)';
+  list.appendChild(header);
+  state.checklist.forEach(t => {
     const div = document.createElement('div');
-    div.style.cssText = 'display:flex;align-items:center;gap:10px;padding:6px 0';
-    div.innerHTML = '<input type="checkbox" ' + (t.done ? 'checked' : '') + ' onchange="toggleChecklist(' + t.id + ')" style="accent-color:var(--green-mid)" /> <span style="font-size:13px">' + t.label + '</span>';
+    div.style.cssText = 'display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid #f0f4f0';
+    div.innerHTML = '<input type="checkbox" ' + (t.done ? 'checked' : '') + ' onchange="toggleChecklist(' + t.id + ')" style="accent-color:var(--green-mid);width:16px;height:16px" /> <span style="font-size:13px;' + (t.done ? 'text-decoration:line-through;color:var(--text-muted)' : '') + '">' + t.label + '</span>';
     list.appendChild(div);
   });
+}
+function toggleChecklist(id) {
+  const task = state.checklist.find(t => t.id === id);
+  if (task) { task.done = !task.done; saveState(); renderChecklist(); }
 }
 
 function renderIntrants() {
   const tbody = document.getElementById('intrants-list-body');
   if (!tbody) return;
-  const intrants = [
-    { name: 'Compost Bio', status: 'ok' },
-    { name: 'Biopesticide Neem', status: 'low' },
-    { name: 'Semences', status: 'ok' },
-    { name: 'Paillage', status: 'out' }
-  ];
+  const intrants = state.intrants || [];
   tbody.innerHTML = '';
-  intrants.forEach(i => {
-    const badge = i.status === 'ok' ? 'badge-green' : i.status === 'low' ? 'badge-gold' : 'badge-red';
-    const label = i.status === 'ok' ? 'OK' : i.status === 'low' ? 'Faible' : 'Rupture';
+  intrants.forEach((item, idx) => {
+    const badge = item.status === 'ok' ? 'badge-green' : item.status === 'low' ? 'badge-gold' : 'badge-red';
+    const label = item.status === 'ok' ? 'OK' : item.status === 'low' ? 'Faible' : 'Rupture';
     const tr = document.createElement('tr');
-    tr.innerHTML = '<td>' + i.name + '</td><td><span class="badge ' + badge + '">' + label + '</span></td><td style="text-align:right"><button class="btn-edit" style="padding:2px 8px;font-size:10px">🔄</button></td>';
+    tr.innerHTML = '<td>' + item.name + '</td><td><span class="badge ' + badge + '">' + label + '</span></td><td style="text-align:right"><button class="btn-edit" style="padding:2px 8px;font-size:10px" onclick="toggleIntrantStatus(' + idx + ')">🔄</button></td>';
     tbody.appendChild(tr);
   });
+}
+function toggleIntrantStatus(idx) {
+  const item = state.intrants[idx];
+  if (!item) return;
+  const cycle = { ok: 'low', low: 'out', out: 'ok' };
+  item.status = cycle[item.status] || 'ok';
+  saveState();
+  renderIntrants();
 }
 
 function renderProgressBars() {
   const container = document.getElementById('progressBars');
   if (!container) return;
+  const total = state.productions.reduce((s, p) => s + (p.qty || 0), 0);
+  const overallPct = Math.min(100, Math.round(total / 1000 * 100));
+  const months = {};
+  state.productions.forEach(p => { const m = p.date.slice(0, 7); months[m] = (months[m] || 0) + p.qty; });
+  const monthKeys = Object.keys(months).sort();
   const phases = [
-    { name: 'Préparation du sol', pct: 80 },
-    { name: 'Mise en place irrigation', pct: 60 },
-    { name: 'Semis/Plantation', pct: 40 },
-    { name: 'Entretien & Récolte', pct: 20 }
+    { name: 'Préparation du sol', pct: Math.min(100, overallPct + 40) },
+    { name: 'Mise en place irrigation', pct: Math.min(100, overallPct + 20) },
+    { name: 'Semis/Plantation', pct: overallPct },
+    { name: 'Entretien & Récolte', pct: Math.max(0, overallPct - 20) }
   ];
   container.innerHTML = phases.map(p => '<div class="progress-row"><div class="progress-label"><span>' + p.name + '</span><span>' + p.pct + '%</span></div><div class="progress-bar"><div class="progress-fill" style="width:' + p.pct + '%"></div></div></div>').join('');
 }
@@ -992,6 +1020,26 @@ function addClient() {
   showToast(nom + ' ajouté !');
 }
 
+function deleteClient(idx) {
+  const c = state.clients[idx];
+  if (!c) return;
+  if (!confirm('Supprimer "' + c.nom + '" ?')) return;
+  state.clients.splice(idx, 1);
+  saveState();
+  renderClients();
+  showToast('Contact supprimé.');
+}
+
+function deleteProduction(idx) {
+  if (!confirm('Supprimer cette récolte ?')) return;
+  if (idx >= 0 && idx < state.productions.length) {
+    state.productions.splice(idx, 1);
+    saveState();
+    renderAll();
+    showToast('Récolte supprimée.');
+  }
+}
+
 function renderClients() {
   const tbody = document.getElementById('clients-body');
   const empty = document.getElementById('clients-empty');
@@ -1003,7 +1051,7 @@ function renderClients() {
   state.clients.forEach((c, i) => {
     const badges = { 'En prospection': 'badge-gold', 'Échantillon déposé': 'badge-blue', 'Client ponctuel': 'badge-green', 'Abonné': 'badge-purple', 'Inactif': 'badge-gray' };
     const tr = document.createElement('tr');
-    tr.innerHTML = '<td>' + c.nom + '</td><td>' + (c.etab || '—') + '</td><td>' + (c.tel || '—') + '</td><td>' + c.seg + '</td><td><span class="badge ' + (badges[c.statut] || 'badge-gray') + '">' + c.statut + '</span></td><td>' + (c.note || '') + '</td><td><button class="btn-edit" onclick="editClient(' + i + ')">✏️</button></td>';
+    tr.innerHTML = '<td>' + c.nom + '</td><td>' + (c.etab || '—') + '</td><td>' + (c.tel || '—') + '</td><td>' + c.seg + '</td><td><span class="badge ' + (badges[c.statut] || 'badge-gray') + '">' + c.statut + '</span></td><td>' + (c.note || '') + '</td><td><button class="btn-edit" onclick="editClient(' + i + ')">✏️</button> <button class="btn-danger" onclick="deleteClient(' + i + ')" style="padding:2px 6px;font-size:10px">🗑️</button></td>';
     tbody.appendChild(tr);
   });
 }
@@ -1318,6 +1366,25 @@ function renderReportingDataTable() {
     tr.innerHTML = '<td>' + p.date + '</td><td>' + p.name + '</td><td>Production</td><td>' + p.qty + ' kg</td><td>' + (p.value || 0).toLocaleString() + ' Ar</td>';
     tbody.appendChild(tr);
   });
+}
+
+function renderForecastKPIs() {
+  const total = (state.productions || []).reduce((s, p) => s + (p.qty || 0), 0);
+  const weeks = {};
+  (state.productions || []).forEach(p => {
+    const d = new Date(p.date);
+    const weekStart = new Date(d);
+    weekStart.setDate(d.getDate() - d.getDay());
+    const key = weekStart.toISOString().slice(0, 10);
+    weeks[key] = (weeks[key] || 0) + p.qty;
+  });
+  const weeklyValues = Object.values(weeks);
+  const avgWeekly = weeklyValues.length > 0 ? Math.round(total / weeklyValues.length) : 0;
+  const el = (id, txt) => { const e = document.getElementById(id); if (e) e.textContent = txt; };
+  el('fcast-total', total + ' kg');
+  el('fcast-weekly-avg', avgWeekly + ' kg');
+  el('fcast-trend', weeklyValues.length >= 2 ? (weeklyValues[weeklyValues.length-1] > weeklyValues[0] ? '📈 Hausse' : '📉 Baisse') : '—');
+  el('fcast-r2', 'Calcul...');
 }
 
 function updateReportingKPIs() {
@@ -1903,16 +1970,16 @@ function updateProdPrice(idx, val) { state.products[idx].price = parseFloat(val)
 function updateProdCost(idx, val) { state.products[idx].cost = parseFloat(val) || 0; saveState(); renderProducts(); }
 function deleteProduct(idx) { if (confirm('Supprimer ' + state.products[idx].name + ' ?')) { state.products.splice(idx, 1); saveState(); renderAdminProducts(); renderProducts(); } }
 
-function changePassword() {
-  const pwd = document.getElementById('new-password').value.trim();
-  if (!pwd || pwd.length < 4) { showToast('Minimum 4 caractères.', 'error'); return; }
-  state.password = pwd;
-  try { localStorage.setItem('biozar_password', pwd); } catch(e) {}
+async function changePassword() {
+  const pwd = document.getElementById("new-password").value.trim();
+  if (!pwd || pwd.length < 4) { showToast("Minimum 4 caract00e8res.", "error"); return; }
+  const hashed = await sha256(pwd);
+  state.password = hashed;
+  try { localStorage.setItem("biozar_password", hashed); } catch(e) {}
   saveState();
-  showToast('Mot de passe changé !');
-  document.getElementById('new-password').value = '';
+  showToast("Mot de passe chang00e9 !");
+  document.getElementById("new-password").value = "";
 }
-
 function exportJSON() {
   download('BIOZAR_data_' + new Date().toISOString().slice(0, 10) + '.json', JSON.stringify(state, null, 2), 'application/json');
   showToast('Données exportées !');

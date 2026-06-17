@@ -118,9 +118,13 @@ const SupabaseAPI = {
 
 function debounce(fn, wait) {
   let t = null;
+  let lastPromise = null;
   return function(...args) {
     if (t) clearTimeout(t);
-    t = setTimeout(() => { t = null; fn.apply(this, args); }, wait);
+    lastPromise = new Promise((resolve) => {
+      t = setTimeout(() => { t = null; resolve(fn.apply(this, args)); }, wait);
+    });
+    return lastPromise;
   };
 }
 
@@ -132,7 +136,12 @@ function debounce(fn, wait) {
 window.BIOZAR_FIREBASE = {
   status: SupabaseAPI.getStatus(),
   saveStateToFirestore: debounce(async function(state) {
-    return await SupabaseAPI.saveStateToFirestore(state);
+    try {
+      return await SupabaseAPI.saveStateToFirestore(state);
+    } catch(e) {
+      console.warn('[BIOZAR] Sync error:', e);
+      return false;
+    }
   }, 800),
   loadStateFromFirestore: SupabaseAPI.loadStateFromFirestore,
   saveBackupState: SupabaseAPI.saveBackupState

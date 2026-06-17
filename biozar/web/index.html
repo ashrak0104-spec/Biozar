@@ -701,7 +701,7 @@ function saveState() {
     delete s.user; delete s.role; delete s.password;
     localStorage.setItem('biozar_state', JSON.stringify(s));
     if (window.BIOZAR_FIREBASE?.saveStateToFirestore) {
-      window.BIOZAR_FIREBASE.saveStateToFirestore(s);
+      window.BIOZAR_FIREBASE.saveStateToFirestore(s).catch(err => console.warn("[BIOZAR] Sync:", err));
     }
   } catch(e) {}
 }
