@@ -1836,8 +1836,6 @@ function saveClient() {
   if (newStatut !== oldStatut) {
     // Log status change to history
     state.statusLog.unshift({ client: c.nom, from: oldStatut, to: newStatut, date: new Date().toISOString().slice(0,10) });
-  }
-  saveState();
     if (newStatut === 'Abonné') {
       showNotif('Nouvel abonné', c.nom + ' est maintenant abonné ! (était : ' + oldStatut + ')');
       sendWhatsAppAlert('BIOZAR CRM : ' + c.nom + ' est maintenant abonné ! Ancien statut : ' + oldStatut);
@@ -1846,6 +1844,8 @@ function saveClient() {
     } else if (oldStatut === 'Inactif' && newStatut !== 'Inactif') {
       showNotif('Réactivation', c.nom + ' est réactivé ! (maintenant : ' + newStatut + ')');
     }
+  }
+  saveState();
 }
 
 function switchCrmTab(tab) {
