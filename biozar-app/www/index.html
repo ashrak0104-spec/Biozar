@@ -31,6 +31,21 @@
     .nav-item:hover{background:rgba(255,255,255,.08);color:#fff}
     .nav-item.active{background:linear-gradient(135deg,var(--green-mid),var(--green-light));color:#fff;box-shadow:0 4px 12px rgba(76,175,80,.35)}
     .nav-item .icon{font-size:18px;width:24px;text-align:center}
+    .nav-item .notif-badge{position:absolute;right:8px;top:8px;background:var(--red);color:#fff;font-size:10px;font-weight:700;min-width:18px;height:18px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 4px;line-height:1;animation:badgePop .3s ease}
+    .nav-item{position:relative}
+    @keyframes badgePop{0%{transform:scale(0)}60%{transform:scale(1.3)}100%{transform:scale(1)}}
+    .notif-item{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-bottom:1px solid var(--border);transition:background .2s;cursor:default;position:relative}
+    .notif-item:hover{background:var(--green-pale)}
+    .notif-item.unread{background:rgba(76,175,80,0.06);border-left:3px solid var(--green-light)}
+    .notif-item.unread .notif-title{font-weight:700}
+    .notif-dot{width:8px;height:8px;border-radius:50%;background:var(--green-light);margin-top:6px;flex-shrink:0}
+    .notif-item.unread .notif-dot{background:var(--red);animation:badgePop .3s ease}
+    .notif-content{flex:1;min-width:0}
+    .notif-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px}
+    .notif-body{font-size:12px;color:var(--text-muted);line-height:1.4}
+    .notif-date{font-size:11px;color:var(--text-muted);margin-top:4px;opacity:.7}
+    .notif-read-btn{background:none;border:none;color:var(--green-mid);cursor:pointer;font-size:14px;padding:2px 6px;border-radius:4px;transition:background .2s;flex-shrink:0}
+    .notif-read-btn:hover{background:var(--green-pale)}
     .sidebar-footer{padding:12px 16px;border-top:1px solid rgba(255,255,255,.08)}
     .sidebar-copy{color:rgba(255,255,255,.3);font-size:11px;text-align:center;padding-top:4px}
     .cloud-status{display:flex;align-items:center;justify-content:center;gap:6px;padding:8px 0;font-size:11px;color:rgba(255,255,255,.5);font-weight:500}
@@ -334,6 +349,7 @@
     <div class="nav-item hide-production hide-commercial" id="nav-risques" onclick="showPage('risques')"><span class="icon">⚠️</span> Risques</div>
     <div class="nav-item hide-production hide-commercial" id="nav-bmc" onclick="showPage('bmc')"><span class="icon">🗺️</span> Business Model</div>
     <div class="nav-section-label requires-admin">Administration</div>
+    <div class="nav-item" id="nav-notifications" onclick="showPage('notifications')"><span class="icon">🔔</span> Notifications<span class="notif-badge" id="nav-notif-badge" style="display:none"></span></div>
     <div class="nav-item requires-admin" id="nav-admin" onclick="showPage('admin')"><span class="icon">⚙️</span> Admin</div>
   </nav>
   <div class="sidebar-footer">
@@ -553,6 +569,15 @@
       </div></div>
     </div>
 
+    <!-- NOTIFICATIONS PAGE -->
+    <div class="page" id="page-notifications">
+      <div class="section-header"><h2>🔔 Notifications</h2><p>Historique des alertes et événements</p></div>
+      <div class="card">
+        <div class="card-header"><div><h3>📋 Centre de Notifications</h3><p id="notif-count">0 notifications</p></div><div style="display:flex;gap:8px"><button class="btn-admin" onclick="markAllRead()">✔ Tout lu</button><button class="btn-danger" onclick="clearAllNotifications()">🗑 Vider</button></div></div>
+        <div class="card-body"><div id="notif-list" style="max-height:500px;overflow-y:auto"></div><div class="empty" id="notif-empty"><div class="empty-icon">🔔</div><p>Aucune notification.</p></div></div>
+      </div>
+    </div>
+
     <!-- ADMIN PAGE -->
     <div class="page" id="page-admin">
       <div class="section-header"><h2>⚙️ Panneau Administrateur</h2><p>Modifiez tous les paramètres</p></div>
@@ -682,7 +707,9 @@ let state = {
   scenarios: [],
   autoExportConfig: { enabled: false, interval: 'weekly', lastExport: null },
   prodThreshold: 80,
-  syncHistory: []
+  syncHistory: [],
+  notifications: [],
+  unreadCount: 0
 };
 
 // ═══════════════════ HELPERS ═══════════════════
@@ -695,7 +722,13 @@ function showToast(msg, type) {
   c.appendChild(t);
   setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 3000);
 }
+function escapeHtml(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 function showNotif(title, body) {
+  state.notifications.push({ id: Date.now(), title: title, body: body || '', date: new Date().toISOString(), read: false });
+  // Cap at 200 notifications
+  if (state.notifications.length > 200) state.notifications = state.notifications.slice(-200);
+  updateNotifBadge();
+  // Browser push notification
   if (Notification.permission === 'granted') {
     var opts = { icon: 'icons/icon-192x192.png', badge: 'icons/icon-192x192.png', tag: 'biozar-' + Date.now(), renotify: true };
     if (body) opts.body = String(body).slice(0, 200);
@@ -704,6 +737,53 @@ function showNotif(title, body) {
 }
 function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('overlay').classList.toggle('open'); }
 function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('overlay').classList.remove('open'); }
+function updateNotifBadge() {
+  var badge = document.getElementById('nav-notif-badge');
+  if (!badge) return;
+  var count = (state.notifications || []).filter(function(n) { return !n.read; }).length;
+  state.unreadCount = count;
+  if (count > 0) { badge.textContent = count > 99 ? '99+' : count; badge.style.display = 'flex'; }
+  else { badge.style.display = 'none'; }
+}
+function markAllRead() {
+  state.notifications.forEach(function(n) { n.read = true; });
+  updateNotifBadge();
+  saveState();
+  renderNotifications();
+}
+function markNotifRead(id) {
+  var n = state.notifications.find(function(x) { return x.id === id; });
+  if (n && !n.read) { n.read = true; updateNotifBadge(); saveState(); renderNotifications(); }
+}
+function clearAllNotifications() {
+  state.notifications = [];
+  updateNotifBadge();
+  saveState();
+  renderNotifications();
+}
+function renderNotifications() {
+  var page = document.getElementById('page-notifications');
+  if (page && !page.classList.contains('active')) return;
+  var list = document.getElementById('notif-list');
+  var empty = document.getElementById('notif-empty');
+  var countEl = document.getElementById('notif-count');
+  if (!list) return;
+  var notifs = (state.notifications || []).slice().reverse();
+  if (countEl) countEl.textContent = notifs.length + ' notification' + (notifs.length !== 1 ? 's' : '');
+  list.innerHTML = '';
+  if (notifs.length === 0) { if (empty) empty.style.display = 'block'; return; }
+  if (empty) empty.style.display = 'none';
+  notifs.forEach(function(n) {
+    var div = document.createElement('div');
+    div.className = 'notif-item' + (n.read ? '' : ' unread');
+    var d = new Date(n.date);
+    var dateStr = d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }) + ' ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    var safeTitle = escapeHtml(n.title);
+    var safeBody = n.body ? escapeHtml(n.body) : '';
+    div.innerHTML = '<div class="notif-dot"></div><div class="notif-content"><div class="notif-title">' + safeTitle + '</div>' + (safeBody ? '<div class="notif-body">' + safeBody + '</div>' : '') + '<div class="notif-date">' + dateStr + '</div></div>' + (!n.read ? '<button class="notif-read-btn" onclick="markNotifRead(' + n.id + ')" title="Marquer lu">✔</button>' : '');
+    list.appendChild(div);
+  });
+}
 
 // ═══════════════════ PERSISTENCE ═══════════════════
 function saveState() {
@@ -859,6 +939,7 @@ function showPage(name) {
   if (nav) nav.classList.add('active');
   closeSidebar();
   if (name === 'reporting') renderProductionForecast();
+  if (name === 'notifications') renderNotifications();
 }
 
 // ═══════════════════ DASHBOARD ═══════════════════
@@ -883,6 +964,8 @@ function renderAll() {
   renderIntrants();
   renderChecklist();
   renderSyncHistory();
+  renderNotifications();
+  updateNotifBadge();
   updateDashboardKPIs();
 }
 
