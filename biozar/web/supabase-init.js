@@ -17,8 +17,8 @@
 */
 
 const supabaseConfig = {
-  url: 'https://yxqikcxpcdazruekeunc.supabase.co',
-  anonKey: 'sb_publishable_KjlUVECekEaUNSIzgj4qSA_cutT46Lx'
+  url: 'https://plawavidmbtryfaujsjr.supabase.co',
+  anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsYXZhd2lkbWJ0cnlmeWF1c2pyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MTk5OTMsImV4cCI6MjA5NjE5NTk5M30.C_l04kOX3ZqJ9O_j4nhokL7QaspRQY83Tpyn8XefNVk'
 };
 
 // ══════════════════════════════════════════════════════════════
