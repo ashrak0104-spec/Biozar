@@ -39,6 +39,13 @@
     .cloud-dot.syncing{background:#f9a825;box-shadow:0 0 6px rgba(249,168,37,.6);animation:pulse 1s infinite}
     .cloud-dot.offline{background:#e53935;box-shadow:0 0 6px rgba(229,57,53,.4)}
     @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+    @keyframes bannerPulse{0%,100%{box-shadow:0 0 0 0 rgba(229,57,53,0)}50%{box-shadow:0 0 0 8px rgba(229,57,53,0.15)}}
+    @keyframes bannerSlideIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+    #prod-alert-banner{display:none;background:linear-gradient(135deg,#ffebee,#fff);border:1.5px solid #ffcdd2;border-radius:12px;padding:14px 16px 14px 48px;margin-bottom:14px;font-size:13px;font-weight:600;color:#b71c1c;position:relative;animation:bannerSlideIn .3s ease,bannerPulse 2s ease-in-out 3;cursor:default}
+    #prod-alert-banner::before{content:'⚠️';position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:18px}
+    #prod-alert-banner .banner-close{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:#b71c1c;cursor:pointer;font-size:18px;line-height:1;padding:4px 8px;border-radius:6px;transition:background .2s}
+    #prod-alert-banner .banner-close:hover{background:rgba(229,57,53,0.12)}
+    #prod-alert-banner .banner-text{display:block;line-height:1.4}
     .main{margin-left:var(--sidebar-w);flex:1;display:flex;flex-direction:column;min-height:100vh}
     .topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:16px 32px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:90;box-shadow:0 2px 8px rgba(0,0,0,.04)}
     .topbar-title{font-size:20px;font-weight:700;color:var(--green-dark)}
@@ -394,7 +401,7 @@
       <div class="three-col">
         <div class="card"><div class="card-header"><div><h3>Calendrier de Production</h3><p>Phases clés</p></div></div><div class="card-body"><div class="timeline" id="production-timeline"></div></div></div>
         <div class="card"><div class="card-header"><div><h3>Saisir Production</h3></div></div><div class="card-body">
-          <div id="prod-alert-banner" style="display:none;background:var(--red-light);border:1px solid #ffcdd2;border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:13px;font-weight:600;color:var(--red)"></div>
+          <div id="prod-alert-banner"></div>
           <div class="form-group" style="margin-bottom:10px"><label>Produit</label><input type="text" id="prod-name" placeholder="Tomate Grade A" /></div>
           <div class="form-row"><div class="form-group"><label>Quantité (kg)</label><input type="number" id="prod-qty" /></div><div class="form-group"><label>Date</label><input type="date" id="prod-date" /></div></div>
           <button class="btn-primary" style="width:100%;margin-top:12px" onclick="addProduction()">+ Enregistrer</button>
@@ -1049,9 +1056,13 @@ function checkProdThreshold() {
   }).reduce((s, p) => s + p.qty, 0);
   if (weekly < threshold) {
     const banner = document.getElementById('prod-alert-banner');
-    if (banner) { banner.textContent = '⚠️ Alerte : Production hebdo (' + weekly + ' kg) sous le seuil (' + threshold + ' kg)'; banner.style.display = 'block'; }
+    if (banner) { banner.innerHTML = '<span class="banner-text">Alerte : Production hebdo (' + weekly + ' kg) sous le seuil (' + threshold + ' kg)</span><button class="banner-close" onclick="dismissAlertBanner()" aria-label="Fermer">✕</button>'; banner.style.display = 'block'; }
     showNotif('Alerte production', 'Hebdo: ' + weekly + ' kg (seuil: ' + threshold + ' kg)');
   }
+}
+function dismissAlertBanner() {
+  var banner = document.getElementById('prod-alert-banner');
+  if (banner) { banner.style.display = 'none'; banner.innerHTML = ''; }
 }
 
 // ═══════════════════ CLIENTS ═══════════════════
