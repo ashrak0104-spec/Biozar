@@ -774,6 +774,8 @@ function updateCloudStatus(status) {
   label.textContent = labels[status] || status;
 }
 function initCloudMonitor() {
+  if (window._cloudMonitorInit) return;
+  window._cloudMonitorInit = true;
   window.addEventListener('online', () => {
     updateCloudStatus('online');
     showToast('Reconnexion ! Sync en cours...');
