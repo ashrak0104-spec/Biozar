@@ -767,6 +767,53 @@ function showNotif(title, body) {
     try { new Notification('BIOZAR - ' + title, opts); } catch(e) {}
   }
 }
+function getChartColors() {
+  var dark = state.darkMode;
+  return {
+    grid: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+    tick: dark ? '#8fa89a' : '#5a7060',
+    green: dark ? '#81c784' : '#2d6a35',
+    greenFill: dark ? 'rgba(129,199,132,0.15)' : 'rgba(45,106,53,0.1)',
+    blue: dark ? '#64b5f6' : '#1976d2',
+    blueFill: dark ? 'rgba(100,181,246,0.15)' : 'rgba(25,118,210,0.1)',
+    gold: dark ? '#ffd54f' : '#f9a825',
+    goldFill: dark ? 'rgba(255,213,79,0.15)' : 'rgba(249,168,37,0.1)',
+    red: dark ? '#ef9a9a' : '#e53935',
+    redFill: dark ? 'rgba(239,154,154,0.2)' : 'rgba(229,57,53,0.2)',
+    purple: dark ? '#ce93d8' : '#7b1fa2'
+  };
+}
+function toggleDarkMode() {
+  state.darkMode = !state.darkMode;
+  applyTheme();
+  saveState();
+  refreshAllCharts();
+}
+function applyTheme() {
+  document.documentElement.setAttribute('data-theme', state.darkMode ? 'dark' : 'light');
+  var btn = document.getElementById('dark-toggle');
+  if (btn) btn.textContent = state.darkMode ? '☀️' : '🌙';
+}
+function setChartDefaults() {
+  if (typeof Chart === 'undefined') return;
+  var colors = getChartColors();
+  Chart.defaults.color = colors.tick;
+  Chart.defaults.borderColor = colors.grid;
+}
+function refreshAllCharts() {
+  setChartDefaults();
+  if (typeof renderChargesChart === 'function') renderChargesChart();
+  if (typeof renderProductionTrend === 'function') renderProductionTrend();
+  if (typeof renderSalesTrend === 'function') renderSalesTrend();
+  if (typeof renderMonthlyComparison === 'function') renderMonthlyComparison();
+  if (typeof renderTopProducts === 'function') renderTopProducts();
+  if (typeof renderProductionForecast === 'function') renderProductionForecast();
+  if (typeof renderSeasonalAnalysis === 'function') renderSeasonalAnalysis();
+  if (typeof renderScenarioSimulator === 'function') renderScenarioSimulator();
+  if (typeof renderYieldStats === 'function') renderYieldStats();
+  if (typeof initCharts === 'function') initCharts();
+}
+
 function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('overlay').classList.toggle('open'); }
 function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('overlay').classList.remove('open'); }
 function updateNotifBadge() {
@@ -1393,7 +1440,7 @@ function renderChargesChart() {
   const colors = ['#e53935','#f9a825','#1976d2','#7b1fa2','#4caf50','#ff6d00','#00bfa5','#78909c'];
   window._chargesChart = new Chart(canvas, {
     type: 'doughnut',
-    data: { labels, datasets: [{ data, backgroundColor: colors }] },
+    data: { labels, datasets: [{ data, backgroundColor: getChartColors().green }] },
     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { font: { size: 11 } } } } }
   });
 }
@@ -1444,6 +1491,7 @@ function simulateMarketingCampaign() {
 
 // ═══════════════════ CHART INIT ═══════════════════
 function initCharts() {
+  setChartDefaults();
   renderChargesChart();
   // Dashboard
   const tCanvas = document.getElementById('chartTresorerie');
