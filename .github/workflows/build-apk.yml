@@ -41,22 +41,19 @@ jobs:
         env:
           KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
         run: |
+          set +e
           if [ -n "$KEYSTORE_B64" ]; then
             printf '%s' "$KEYSTORE_B64" | base64 -d > "${GITHUB_WORKSPACE}/biozar-app/android/app/biozar-release.keystore" 2>&1
             if [ -s "${GITHUB_WORKSPACE}/biozar-app/android/app/biozar-release.keystore" ]; then
               echo "Keystore restored from secret"; ls -la "${GITHUB_WORKSPACE}/biozar-app/android/app/biozar-release.keystore"
+              exit 0
             else
-              echo "Keystore decode failed, will generate temporary" >&2; KEYSTORE_B64=""
+              echo "Secret decode failed, using temp keystore"
             fi
           fi
-          if [ -z "$KEYSTORE_B64" ]; then
-            echo "Generating temporary debug keystore..."
-            keytool -genkey -v -keystore "${GITHUB_WORKSPACE}/biozar-app/android/app/biozar-release.keystore" \
-              -alias biozar -keyalg RSA -keysize 2048 -validity 10000 \
-              -storepass biozar2026 -keypass biozar2026 \
-              -dname "CN=Biozar, OU=Dev, O=BIOZAR, L=Antananarivo, ST=Analamanga, C=MG"
-            echo "Temporary keystore generated"
-          fi
+          keytool -genkey -v -keystore "${GITHUB_WORKSPACE}/biozar-app/android/app/biozar-release.keystore" -alias biozar -keyalg RSA -keysize 2048 -validity 10000 -storepass biozar2026 -keypass biozar2026 -dname "CN=Biozar, OU=Dev, O=BIOZAR, L=Antananarivo, ST=Analamanga, C=MG"
+          echo "Temp keystore created"
+          ls -la "${GITHUB_WORKSPACE}/biozar-app/android/app/biozar-release.keystore"
 
       - name: 📦 Installer les dépendances
         run: npm install
