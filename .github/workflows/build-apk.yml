@@ -15,9 +15,6 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: biozar-app
 
     steps:
       - name: 📥 Checkout
@@ -40,19 +37,24 @@ jobs:
       - name: 📋 Restaurer le keystore de signature
         env:
           KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
-        run: echo "OK secret_len=${#KEYSTORE_B64}" && keytool -genkey -v -keystore android/app/biozar-release.keystore -alias biozar -keyalg RSA -keysize 2048 -validity 10000 -storepass biozar2026 -keypass biozar2026 -dname "CN=Biozar" && ls -la android/app/biozar-release.keystore
+        run: |
+          echo "len=${#KEYSTORE_B64}"
+          echo "pwd=$(pwd)"
+          keytool -genkey -v -keystore biozar-app/android/app/biozar-release.keystore -alias biozar -keyalg RSA -keysize 2048 -validity 10000 -storepass biozar2026 -keypass biozar2026 -dname "CN=Biozar" && ls -la biozar-app/android/app/biozar-release.keystore
 
       - name: 📦 Installer les dépendances
         run: npm install
+        working-directory: biozar-app
 
       - name: 🔄 Copier les fichiers web et sync Capacitor
         run: npm run build
+        working-directory: biozar-app
 
       - name: 🔨 Builder l'APK Release
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: cd android && ./gradlew assembleRelease
+        run: cd biozar-app/android && ./gradlew assembleRelease
 
       - name: 📤 Upload APK (artifact)
         uses: actions/upload-artifact@v4
