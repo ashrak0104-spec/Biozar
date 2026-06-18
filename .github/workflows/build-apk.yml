@@ -26,10 +26,10 @@ jobs:
           java-version: 17
           distribution: temurin
 
-      - name: 📦 Setup Node.js 20
+      - name: 📦 Setup Node.js 22
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: 🤖 Setup Android SDK
         uses: android-actions/setup-android@v3
@@ -42,8 +42,12 @@ jobs:
         run: npm install
         working-directory: biozar-app
 
-      - name: 🔄 Copier les fichiers web et sync Capacitor
-        run: npm run build 2>&1
+      - name: 🔄 Copier les fichiers web
+        run: node -e "const{cpSync,rmSync,existsSync}=require('fs');const{join}=require('path');const src=join(__dirname,'..','biozar','web');const dst=join(__dirname,'www');console.log('src:',src);console.log('dst:',dst);console.log('exists:',existsSync(src));if(!existsSync(src)){console.error('Erreur: biozar/web/ introuvable');process.exit(1)}['index.html','chart.js','supabase-init.js','sw.js','version.json','manifest.json'].forEach(f=>cpSync(join(src,f),join(dst,f),{force:true}));const iconsDst=join(dst,'icons');if(existsSync(iconsDst))rmSync(iconsDst,{recursive:true});cpSync(join(src,'icons'),iconsDst,{recursive:true});console.log('OK')"
+        working-directory: biozar-app
+
+      - name: 🔄 Sync Capacitor
+        run: npx cap sync --verbose 2>&1
         working-directory: biozar-app
 
       - name: 🔨 Builder l'APK Release
