@@ -9,18 +9,19 @@ echo  ╚═══════════════════════�
 echo.
 echo  📋 Copie des fichiers web mis à jour...
 
-REM Copier les fichiers depuis le dossier parent
-copy /Y "..\index.html" "www\index.html" >nul
-copy /Y "..\sw.js" "www\sw.js" >nul
-copy /Y "..\manifest.json" "www\manifest.json" >nul
-copy /Y "..\chart.js" "www\chart.js" >nul
-copy /Y "..\firebase-init.js" "www\firebase-init.js" >nul
-copy /Y "..\version.json" "www\version.json" >nul
+REM Copier les fichiers depuis le dossier parent (biozar/web/)
+set WEB_SRC=..\biozar\web
+copy /Y "%WEB_SRC%\index.html" "www\index.html" >nul
+copy /Y "%WEB_SRC%\sw.js" "www\sw.js" >nul
+copy /Y "%WEB_SRC%\manifest.json" "www\manifest.json" >nul
+copy /Y "%WEB_SRC%\chart.js" "www\chart.js" >nul
+copy /Y "%WEB_SRC%\supabase-init.js" "www\supabase-init.js" >nul
+copy /Y "%WEB_SRC%\version.json" "www\version.json" >nul
 
 REM Copier les icônes
-xcopy /Y /E "..\icons\*" "www\icons\" >nul
+if exist "%WEB_SRC%\icons" xcopy /Y /E "%WEB_SRC%\icons\*" "www\icons\" >nul
 
-echo  ✅ Fichiers web mis à jour (v1.0.1)
+echo  ✅ Fichiers web mis à jour (v1.1.1)
 
 REM Synchronisation avec Android
 echo.

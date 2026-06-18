@@ -705,6 +705,27 @@
       </div>
       <div class="admin-tab-content active" id="tab-produits"><div class="card"><div class="card-header"><div><h3>🥦 Produits</h3></div><button class="btn-admin" onclick="addNewProduct()">+ Nouveau</button></div><div class="card-body" id="admin-products-list"></div></div></div>
       <div class="admin-tab-content" id="tab-charges"><div class="card"><div class="card-header"><div><h3>💸 Charges Mensuelles</h3></div></div><div class="card-body" id="admin-charges-list"></div></div></div>
+      <div class="admin-tab-content" id="tab-agents">
+        <div class="card">
+          <div class="card-header">
+            <div><h3>👥 Gestion des Agents</h3><p>Gérez les accès et les rôles</p></div>
+            <button class="btn-admin" onclick="showNewAgentModal()">+ Nouvel Agent</button>
+          </div>
+          <div class="card-body" style="padding:0">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Nom / Login</th>
+                  <th>Rôle</th>
+                  <th>Mot de passe</th>
+                  <th style="text-align:right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="admin-agents-list"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
       <div class="admin-tab-content" id="tab-password"><div class="card"><div class="card-header"><div><h3>🔑 Mot de Passe</h3></div></div><div class="card-body"><div class="form-group"><label>Nouveau mot de passe</label><input type="password" id="new-password" /></div><button class="btn-admin" onclick="changePassword()">Changer</button></div></div></div>
       <div class="admin-tab-content" id="tab-export"><div class="card"><div class="card-header"><div><h3>📤 Export / Import</h3></div></div><div class="card-body"><button class="export-btn" onclick="exportJSON()"><span class="export-icon">📥</span> Exporter toutes les données (JSON)</button><button class="export-btn" onclick="document.getElementById('importFile').click()"><span class="export-icon">📤</span> Importer des données (JSON)</button><input type="file" id="importFile" accept=".json" style="display:none" onchange="importJSON(event)" /></div></div></div>
       <div class="admin-tab-content" id="tab-cloud"><div class="card"><div class="card-header"><div><h3>☁️ Historique de Synchronisation</h3><p>Dernières 20 synchronisations Supabase</p></div><span class="badge badge-green" id="cloud-sync-count">0 syncs</span></div><div class="card-body" style="padding:0"><table class="data-table"><thead><tr><th>Date</th><th>Heure</th><th>Taille</th><th>Statut</th></tr></thead><tbody id="sync-history-body"></tbody></table><div class="empty" id="sync-history-empty"><div class="empty-icon">☁️</div><p>Aucune synchronisation enregistrée.</p></div></div></div><div class="two-col"><div class="card"><div class="card-header"><div><h3>📊 Statistiques Cloud</h3></div></div><div class="card-body"><div id="cloud-stats"></div></div></div><div class="card"><div class="card-header"><div><h3>🔗 Connexion</h3></div></div><div class="card-body"><div id="cloud-connection-info"></div></div></div></div></div>
@@ -2196,6 +2217,7 @@ function renderAll() {
   renderScenarioList();
   renderAdminProducts();
   renderAdminCharges();
+  renderAgents();
   renderYieldStats();
   renderIncidents();
   renderIntrants();
@@ -3596,6 +3618,79 @@ if ('serviceWorker' in navigator) {
 // ═══════════════════ INIT ═══════════════════
 loadState();
 updateDate();
+
+function renderAgents() {
+  const tbody = document.getElementById('admin-agents-list');
+  if (!tbody) return;
+  const users = state.users || [];
+  tbody.innerHTML = users.map((u, i) => {
+    const roleLabel = (state.roleConfig[u.role] || {}).label || u.role;
+    return '<tr>' +
+      '<td><strong>' + u.name + '</strong><br><span style="font-size:11px;color:var(--text-muted)">@' + u.login + '</span></td>' +
+      '<td><span class="badge badge-blue">' + roleLabel + '</span></td>' +
+      '<td><code style="background:var(--bg);padding:2px 6px;border-radius:4px">' + u.password + '</code></td>' +
+      '<td style="text-align:right">' +
+        '<button class="btn-edit" onclick="editAgent(' + i + ')" style="margin-right:6px">✏️</button>' +
+        (u.login !== 'admin' ? '<button class="btn-danger" onclick="deleteAgent(' + i + ')">🗑️</button>' : '') +
+      '</td></tr>';
+  }).join('');
+}
+
+function showNewAgentModal() {
+  document.getElementById('am-idx').value = -1;
+  document.getElementById('am-name').value = '';
+  document.getElementById('am-login').value = '';
+  document.getElementById('am-role').value = 'operator';
+  document.getElementById('am-pass').value = '';
+  document.getElementById('agentModal').classList.add('open');
+}
+
+function editAgent(idx) {
+  const u = state.users[idx];
+  if (!u) return;
+  document.getElementById('am-idx').value = idx;
+  document.getElementById('am-name').value = u.name;
+  document.getElementById('am-login').value = u.login;
+  document.getElementById('am-role').value = u.role;
+  document.getElementById('am-pass').value = u.password;
+  document.getElementById('agentModal').classList.add('open');
+}
+
+function saveAgent() {
+  const idx = parseInt(document.getElementById('am-idx').value);
+  const name = document.getElementById('am-name').value.trim();
+  const login = document.getElementById('am-login').value.trim().toLowerCase();
+  const role = document.getElementById('am-role').value;
+  const pass = document.getElementById('am-pass').value.trim();
+  
+  if (!name || !login || !pass) { showToast('Veuillez remplir tous les champs', 'error'); return; }
+  
+  const newUser = { name, login, role, password: pass };
+  
+  if (idx >= 0) {
+    state.users[idx] = newUser;
+  } else {
+    if (state.users.some(u => u.login === login)) { showToast('Ce login existe déjà', 'error'); return; }
+    state.users.push(newUser);
+  }
+  
+  saveState();
+  renderAgents();
+  document.getElementById('agentModal').classList.remove('open');
+  showToast('Agent enregistré !');
+  trackFeatureClick('saveAgent');
+}
+
+function deleteAgent(idx) {
+  const u = state.users[idx];
+  if (!u) return;
+  if (u.login === 'admin') { showToast('Impossible de supprimer l\'admin principal', 'error'); return; }
+  if (!confirm('Supprimer l\'agent "' + u.name + '" ?')) return;
+  state.users.splice(idx, 1);
+  saveState();
+  renderAgents();
+  showToast('Agent supprimé');
+}
 
 // Hide splash
 setTimeout(() => {

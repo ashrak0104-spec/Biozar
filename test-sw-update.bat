@@ -4,9 +4,11 @@ color 0B
 echo.
 echo ╔══════════════════════════════════════════════════════╗
 echo ║   BIOZAR - Test du Badge de Mise à Jour PWA        ║
-echo ║   Simule une mise à jour et redéploie sur Hosting   ║
+echo ║   Simule une mise à jour et redéploie sur Pages     ║
 echo ╚══════════════════════════════════════════════════════╝
 echo.
+
+set WEB_DIR=biozar\web
 
 REM ── Lire le numéro de version actuel ──────────────────
 set /p CURRENT_VER=<version.txt 2>nul
@@ -16,24 +18,23 @@ set /a NEXT_VER=CURRENT_VER+1
 
 echo [1/4] Incrémentation de CACHE_NAME : biozar-v%CURRENT_VER% → biozar-v%NEXT_VER%
 powershell -Command ^
-  "(Get-Content sw.js) -replace 'biozar-v%CURRENT_VER%', 'biozar-v%NEXT_VER%' | Set-Content sw.js"
+  "(Get-Content %WEB_DIR%\sw.js) -replace 'biozar-v%CURRENT_VER%', 'biozar-v%NEXT_VER%' | Set-Content %WEB_DIR%\sw.js"
 echo  ✅ CACHE_NAME mis à jour
 
 echo.
 echo [2/4] Mise à jour version.json...
 powershell -Command ^
-  "$json = Get-Content version.json -Raw | ConvertFrom-Json; $json.version = '1.0.%NEXT_VER%'; $json | ConvertTo-Json | Set-Content version.json"
-echo  ✅ version.json mis à jour (1.0.%NEXT_VER%)
+  "$json = Get-Content %WEB_DIR%\version.json -Raw | ConvertFrom-Json; $json.version = '1.1.' + %NEXT_VER%; $json.buildDate = Get-Date -Format 'yyyy-MM-dd'; $json | ConvertTo-Json | Set-Content %WEB_DIR%\version.json"
+echo  ✅ version.json mis à jour (1.1.%NEXT_VER%)
 
 REM Mettre à jour le compteur
 echo %NEXT_VER%> version.txt
 
 echo.
-echo [3/4] Déploiement sur Firebase Hosting...
-call npx -y firebase-tools@latest deploy --only hosting
+echo [3/4] Déploiement sur Cloudflare Pages...
+npx wrangler pages deploy %WEB_DIR% --project-name=biozar
 if %ERRORLEVEL% NEQ 0 (
   echo  ❌ Échec du déploiement !
-  echo  ⚠️ Vérifie que tu es connecté : npx firebase-tools login
   pause
   exit /b 1
 )
@@ -52,12 +53,11 @@ echo  ║     devrait apparaître en haut de l'écran       ║
 echo  ║  4. Clique "Mettre à jour" pour activer la      ║
 echo  ║     nouvelle version                             ║
 echo  ║  5. Va dans Admin > Export pour vérifier la     ║
-echo  ║     version affichée (1.0.%NEXT_VER%)           ║
+echo  ║     version affichée (1.1.%NEXT_VER%)           ║
 echo  ╚══════════════════════════════════════════════════╝
 echo.
 echo Pour RESTAURER la version précédente :
-echo   1. git checkout sw.js version.json
-echo   2. npx firebase-tools deploy --only hosting
+echo   git checkout %WEB_DIR%\sw.js %WEB_DIR%\version.json
 echo.
 
 pause

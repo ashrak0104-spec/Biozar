@@ -10,12 +10,15 @@ echo.
 
 REM ── Étape 1 : Copier les fichiers web ────────────────
 echo [1/4] Copie des fichiers web...
-copy /Y "..\index.html" "www\index.html" >nul
-copy /Y "..\sw.js" "www\sw.js" >nul
-copy /Y "..\manifest.json" "www\manifest.json" >nul
-copy /Y "..\chart.js" "www\chart.js" >nul
-if exist "..\icons" xcopy /E /Y "..\icons" "www\icons\" >nul
-echo  ✅ Fichiers web à jour
+set WEB_SRC=..\biozar\web
+copy /Y "%WEB_SRC%\index.html" "www\index.html" >nul
+copy /Y "%WEB_SRC%\sw.js" "www\sw.js" >nul
+copy /Y "%WEB_SRC%\manifest.json" "www\manifest.json" >nul
+copy /Y "%WEB_SRC%\chart.js" "www\chart.js" >nul
+copy /Y "%WEB_SRC%\supabase-init.js" "www\supabase-init.js" >nul
+copy /Y "%WEB_SRC%\version.json" "www\version.json" >nul
+if exist "%WEB_SRC%\icons" xcopy /E /Y "%WEB_SRC%\icons" "www\icons\" >nul
+echo  ✅ Fichiers web à jour (v1.1.1)
 
 REM ── Étape 2 : Synchroniser Capacitor ────────────────
 echo.
