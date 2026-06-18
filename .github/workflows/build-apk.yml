@@ -41,7 +41,10 @@ jobs:
         env:
           KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
         run: |
-          echo "$KEYSTORE_B64" | base64 -d > android/app/biozar-release.keystore
+          if [ -z "$KEYSTORE_B64" ]; then echo "❌ KEYSTORE_B64 secret is empty"; exit 1; fi
+          echo "$KEYSTORE_B64" | openssl base64 -d -A > android/app/biozar-release.keystore 2>&1
+          if [ ! -s android/app/biozar-release.keystore ]; then echo "❌ Failed to decode keystore"; exit 1; fi
+          ls -la android/app/biozar-release.keystore
 
       - name: 📦 Installer les dépendances
         run: npm install
