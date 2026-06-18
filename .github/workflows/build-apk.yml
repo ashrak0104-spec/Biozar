@@ -35,9 +35,7 @@ jobs:
         uses: android-actions/setup-android@v3
 
       - name: 📋 Restaurer le keystore de signature
-        run: |
-          echo "JH=$JAVA_HOME"
-          echo "ok"
+        run: echo "hello"
 
       - name: 📦 Installer les dépendances
         run: npm install
