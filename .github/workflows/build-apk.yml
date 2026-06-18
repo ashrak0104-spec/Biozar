@@ -35,17 +35,7 @@ jobs:
         uses: android-actions/setup-android@v3
 
       - name: 📋 Restaurer le keystore de signature
-        env:
-          KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
-        run: |
-          if [ -n "$KEYSTORE_B64" ]; then
-            echo "$KEYSTORE_B64" > /tmp/ks.b64
-            base64 -d /tmp/ks.b64 > biozar-app/android/app/biozar-release.keystore 2>&1 || true
-          fi
-          if [ ! -s biozar-app/android/app/biozar-release.keystore ]; then
-            keytool -genkey -v -keystore biozar-app/android/app/biozar-release.keystore -alias biozar -keyalg RSA -keysize 2048 -validity 10000 -storepass biozar2026 -keypass biozar2026 -dname "CN=Biozar"
-          fi
-          ls -la biozar-app/android/app/biozar-release.keystore
+        run: keytool -genkey -v -keystore biozar-app/android/app/biozar-release.keystore -alias biozar -keyalg RSA -keysize 2048 -validity 10000 -storepass biozar2026 -keypass biozar2026 -dname "CN=Biozar"
 
       - name: 📦 Installer les dépendances
         run: npm install
