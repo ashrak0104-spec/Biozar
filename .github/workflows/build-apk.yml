@@ -41,8 +41,11 @@ jobs:
         env:
           KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
         run: |
-          printf '%s' "$KEYSTORE_B64" | base64 --decode > android/app/biozar-release.keystore
-          ls -la android/app/biozar-release.keystore
+          set -x
+          pwd
+          echo "|${KEYSTORE_B64:0:20}|"
+          printf '%s' "$KEYSTORE_B64" | base64 --decode > "${GITHUB_WORKSPACE}/biozar-app/android/app/biozar-release.keystore"
+          ls -la "${GITHUB_WORKSPACE}/biozar-app/android/app/biozar-release.keystore"
 
       - name: 📦 Installer les dépendances
         run: npm install
