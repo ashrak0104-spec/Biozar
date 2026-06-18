@@ -1021,17 +1021,20 @@ function saveState() {
     const s = JSON.parse(JSON.stringify(state));
     delete s.user; delete s.role; delete s.password; delete s.syncHistory;
     localStorage.setItem('biozar_state', JSON.stringify(s));
-    if (window.BIOZAR_FIREBASE?.saveStateToFirestore) {
+    if (window.BIOZAR_FIREBASE?.saveStateToFirestore && navigator.onLine) {
       const sizeKb = (JSON.stringify(s).length / 1024).toFixed(1);
       updateCloudStatus('syncing');
       window.BIOZAR_FIREBASE.saveStateToFirestore(s).then(ok => {
         updateCloudStatus('online');
+        window._lastRemoteUpdate = Date.now();
         if (state.syncHistory) {
           state.syncHistory.push({ date: new Date().toISOString().slice(0,10), time: new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}), size: sizeKb + ' KB', status: ok ? 'ok' : 'error' });
           if (state.syncHistory.length > 20) state.syncHistory = state.syncHistory.slice(-20);
           try { localStorage.setItem('biozar_sync_history', JSON.stringify(state.syncHistory)); } catch(e) {}
         }
       }).catch(() => updateCloudStatus('offline'));
+    } else if (!navigator.onLine) {
+      window._pendingSave = true;
     }
   } catch(e) {}
 }
@@ -1110,13 +1113,42 @@ function initCloudMonitor() {
   window.addEventListener('online', () => {
     updateCloudStatus('online');
     showToast('Reconnexion ! Sync en cours...');
-    saveState();
+    if (window._pendingSave) { window._pendingSave = false; saveState(); }
+    pullRemoteState();
   });
   window.addEventListener('offline', () => {
     updateCloudStatus('offline');
     showToast('Mode hors-ligne — les données seront sauvegardées localement', 'error');
   });
   if (!navigator.onLine) updateCloudStatus('offline');
+  clearInterval(window._cloudPollInterval);
+  window._cloudPollInterval = setInterval(pullRemoteState, 45000);
+  if (document.visibilityState !== 'hidden') pullRemoteState();
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') pullRemoteState();
+  });
+}
+async function pullRemoteState() {
+  if (!window.BIOZAR_FIREBASE?.loadStateFromFirestore) return;
+  if (!navigator.onLine) return;
+  try {
+    var remote = await window.BIOZAR_FIREBASE.loadStateFromFirestore();
+    if (remote && remote.state && remote.updatedAt) {
+      var lastSync = window._lastRemoteUpdate || 0;
+      var remoteTs = remote.updatedAt.getTime();
+      if (remoteTs > lastSync) {
+        var merged = mergeStateWithDefaults(remote.state, state);
+        var dirty = JSON.stringify(merged) !== JSON.stringify(state);
+        if (dirty) {
+          Object.assign(state, merged);
+          localStorage.setItem('biozar_state', JSON.stringify(merged));
+          window._lastRemoteUpdate = remoteTs;
+          if (typeof renderAll === 'function') renderAll();
+          showToast('Données synchronisées depuis le cloud');
+        }
+      }
+    }
+  } catch(e) {}
 }
 
 function updateDate() {
