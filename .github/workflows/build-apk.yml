@@ -1,0 +1,78 @@
+name: Build APK Android
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'biozar/web/**'
+      - 'biozar-app/**'
+      - '.github/workflows/build-apk.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: biozar-app
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: ☕ Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: temurin
+
+      - name: 📦 Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: 🤖 Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: 📋 Créer le keystore de signature
+        run: |
+          keytool -genkey -v -keystore android/app/biozar-release.keystore \
+            -alias biozar -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass biozar2026 -keypass biozar2026 \
+            -dname "CN=BIOZAR, OU=Dev, O=BIOZAR, L=Antananarivo, S=Madagascar, C=MG"
+
+      - name: 📦 Installer les dépendances
+        run: npm install
+
+      - name: 🔄 Copier les fichiers web et sync Capacitor
+        run: npm run build
+
+      - name: 🔨 Builder l'APK Release
+        run: cd android && ./gradlew assembleRelease
+
+      - name: 📤 Upload APK (artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: biozar-app-release
+          path: biozar-app/android/app/build/outputs/apk/release/app-release.apk
+          retention-days: 90
+
+      - name: 📦 Publier sur GitHub Release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: apk-latest
+          name: BIOZAR APK (${{ github.sha }})
+          body: |
+            Dernier APK BIOZAR construit automatiquement.
+            SHA : ${{ github.sha }}
+            Date : ${{ github.event.head_commit.timestamp || 'now' }}
+          artifacts: biozar-app/android/app/build/outputs/apk/release/app-release.apk
+          artifactContentType: application/vnd.android.package-archive
+          replacesArtifacts: true
+          allowUpdates: true
+          makesLatest: true
+          draft: false
+          prerelease: false

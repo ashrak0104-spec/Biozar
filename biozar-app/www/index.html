@@ -211,6 +211,9 @@
     .danger-zone h4{color:var(--red);font-size:15px;font-weight:700;margin-bottom:12px}
     .charge-edit-row{display:grid;grid-template-columns:1fr auto;align-items:center;gap:12px;padding:12px 16px;border:1px solid var(--border);border-radius:10px;margin-bottom:10px}
     .product-edit-row{display:grid;grid-template-columns:auto 1fr auto auto auto;align-items:center;gap:12px;padding:14px 16px;border:1px solid var(--border);border-radius:10px;margin-bottom:10px}
+    .user-edit-row{display:grid;grid-template-columns:1fr 1.5fr 1fr 1fr auto auto;align-items:center;gap:10px;padding:12px 16px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px}
+    .user-edit-row input,.user-edit-row select{padding:8px 10px;border:1.5px solid var(--border);border-radius:6px;font-family:'Inter',sans-serif;font-size:13px;color:var(--text);background:var(--surface);outline:none}
+    .user-edit-row input:focus,.user-edit-row select:focus{border-color:var(--green-light)}
     .product-edit-emoji{font-size:28px;width:40px;text-align:center}
     .export-btn{display:flex;align-items:center;gap:10px;padding:14px 20px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface);cursor:pointer;font-size:14px;font-weight:600;transition:all .2s;margin-bottom:10px;width:100%}
     .export-btn:hover{border-color:var(--green-light);background:var(--green-pale)}
@@ -255,7 +258,7 @@
 <!-- SPLASH SCREEN -->
 <div id="appSplash" style="position:fixed;inset:0;z-index:10000;background:linear-gradient(145deg,#0f2612,#1a3d1f 40%,#2d6a35);display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .8s ease;opacity:1">
   <div style="animation:fadeIn 1s ease;text-align:center">
-    <div style="width:200px;height:200px;background:rgba(255,255,255,0.1);border-radius:50%;margin:0 auto 20px;display:flex;align-items:center;justify-content:center;font-size:80px">🌿</div>
+    <img src="../logo BIOZAR.png" alt="BIOZAR Logo" style="width:200px;height:200px;object-fit:contain;margin:0 auto 20px;">
     <h1 style="font-family:'Playfair Display',serif;font-size:42px;color:#fff;letter-spacing:-0.5px">BIOZAR</h1>
     <p style="color:rgba(255,255,255,0.55);font-size:15px;letter-spacing:2px;text-transform:uppercase;margin-top:6px">Bio de Madagascar</p>
   </div>
@@ -702,6 +705,7 @@
         <div class="admin-tab" onclick="showAdminTab('reset')">⚠️ Réinitialisation</div>
         <div class="admin-tab" onclick="showAdminTab('cloud')">☁️ Cloud</div>
         <div class="admin-tab" onclick="showAdminTab('whatsapp')">💬 WhatsApp</div>
+        <div class="admin-tab" onclick="showAdminTab('users')">👥 Utilisateurs</div>
       </div>
       <div class="admin-tab-content active" id="tab-produits"><div class="card"><div class="card-header"><div><h3>🥦 Produits</h3></div><button class="btn-admin" onclick="addNewProduct()">+ Nouveau</button></div><div class="card-body" id="admin-products-list"></div></div></div>
       <div class="admin-tab-content" id="tab-charges"><div class="card"><div class="card-header"><div><h3>💸 Charges Mensuelles</h3></div></div><div class="card-body" id="admin-charges-list"></div></div></div>
@@ -710,6 +714,7 @@
       <div class="admin-tab-content" id="tab-cloud"><div class="card"><div class="card-header"><div><h3>☁️ Historique de Synchronisation</h3><p>Dernières 20 synchronisations Supabase</p></div><span class="badge badge-green" id="cloud-sync-count">0 syncs</span></div><div class="card-body" style="padding:0"><table class="data-table"><thead><tr><th>Date</th><th>Heure</th><th>Taille</th><th>Statut</th></tr></thead><tbody id="sync-history-body"></tbody></table><div class="empty" id="sync-history-empty"><div class="empty-icon">☁️</div><p>Aucune synchronisation enregistrée.</p></div></div></div><div class="two-col"><div class="card"><div class="card-header"><div><h3>📊 Statistiques Cloud</h3></div></div><div class="card-body"><div id="cloud-stats"></div></div></div><div class="card"><div class="card-header"><div><h3>🔗 Connexion</h3></div></div><div class="card-body"><div id="cloud-connection-info"></div></div></div></div></div>
       <div class="admin-tab-content" id="tab-reset"><div class="card"><div class="card-header"><div><h3>⚠️ Réinitialisation</h3></div></div><div class="card-body"><div class="danger-zone"><h4>🗑️ Tout réinitialiser</h4><p>Cette action supprime toutes les données et ne peut pas être annulée.</p><button class="btn-danger" onclick="resetAllData()">🗑️ Réinitialiser toutes les données</button></div></div></div></div>
       <div class="admin-tab-content" id="tab-whatsapp"><div class="card"><div class="card-header"><div><h3>💬 Notifications WhatsApp</h3><p>Alertes production et incidents via WhatsApp</p></div></div><div class="card-body"><div class="form-group"><label style="display:flex;align-items:center;gap:10px;cursor:pointer"><input type="checkbox" id="wa-enabled" style="width:18px;height:18px" onchange="saveWhatsAppSettings()" /> <span style="font-weight:600">Activer les alertes WhatsApp</span></label><p style="font-size:12px;color:var(--text-muted);margin-top:6px">Ouvre WhatsApp Web avec le message pré-rempli pour l'alerte</p></div><div class="form-group"><label>Numéro WhatsApp (format international)</label><input type="tel" id="wa-phone" placeholder="26134567890" style="width:100%;padding:10px;border-radius:8px;border:1.5px solid var(--border)" onchange="saveWhatsAppSettings()" /><p style="font-size:12px;color:var(--text-muted);margin-top:4px">Ex: 26134567890 (sans + ou espaces)</p></div><div style="margin-top:16px"><button class="btn-primary" onclick="testWhatsApp()">📤 Tester l'envoi</button></div></div></div></div>
+      <div class="admin-tab-content" id="tab-users"><div class="card"><div class="card-header"><div><h3>👥 Gestion des Utilisateurs</h3><p>Ajoutez, modifiez ou supprimez des comptes</p></div><button class="btn-admin" onclick="showAddUserForm()">+ Nouvel utilisateur</button></div><div class="card-body"><div id="add-user-form" style="display:none;margin-bottom:20px;padding:16px;border:1px solid var(--border);border-radius:10px;background:var(--green-pale)"><h4 style="margin-bottom:12px;font-size:14px;font-weight:700">➕ Ajouter un utilisateur</h4><div class="form-row"><div class="form-group"><label>Login</label><input type="text" id="new-user-login" placeholder="login" /></div><div class="form-group"><label>Nom</label><input type="text" id="new-user-name" placeholder="Nom affiché" /></div></div><div class="form-row"><div class="form-group"><label>Rôle</label><select id="new-user-role"><option value="admin">Admin/Direction</option><option value="production">Chef Production</option><option value="commercial">Commercial</option><option value="logistics">Logistique</option><option value="operator">Agent</option></select></div><div class="form-group"><label>Mot de passe</label><input type="text" id="new-user-pass" placeholder="Mot de passe" /></div></div><div style="display:flex;gap:10px"><button class="btn-admin" onclick="addUser()">💾 Ajouter</button><button class="btn-outline" onclick="hideAddUserForm()">Annuler</button></div></div><div id="admin-users-list"></div></div></div></div>
     </div>
 
   </div><!-- /content -->
@@ -720,7 +725,7 @@
 <script>
 // ═══════════════════ STATE ═══════════════════
 let state = {
-  version: '1.0.1',
+  version: '1.1.1',
   productions: [
     // --- Janvier 2026 ---
     { date: '2026-01-12', name: 'Salade Bio', qty: 15, value: 45000 },
@@ -810,8 +815,8 @@ let state = {
     { client: 'Hôtel Royal Palissandre', from: 'Échantillon déposé', to: 'Abonné', date: '2026-01-15' },
     { client: 'Le Jardin d’Ankify', from: 'En prospection', to: 'Abonné', date: '2026-01-20' },
     { client: 'Miora Soa', from: 'Client ponctuel', to: 'Abonné', date: '2026-01-25' },
-    { client: 'Hôtel Montagne d'Ambre', from: 'En prospection', to: 'Client ponctuel', date: '2026-02-10' },
-    { client: 'Les Jardins d'Analamena', from: 'Client ponctuel', to: 'Abonné', date: '2026-02-01' },
+    { client: 'Hôtel Montagne d\u2019Ambre', from: 'En prospection', to: 'Client ponctuel', date: '2026-02-10' },
+    { client: 'Les Jardins d\u2019Analamena', from: 'Client ponctuel', to: 'Abonné', date: '2026-02-01' },
     { client: 'Chez Gaspard', from: 'En prospection', to: 'Client ponctuel', date: '2026-02-28' },
     { client: 'Biolove Market', from: 'En prospection', to: 'Échantillon déposé', date: '2026-03-12' },
     { client: 'Résidence Mahavoky', from: 'En prospection', to: 'Client ponctuel', date: '2026-03-20' },
@@ -1035,7 +1040,15 @@ function mergeStateWithDefaults(saved, defaults) {
   if (!saved) return result;
   Object.keys(saved).forEach(key => {
     if (key === 'user' || key === 'role' || key === 'password') return;
-    if (Array.isArray(saved[key])) {
+    if (key === 'users') {
+      if (Array.isArray(saved[key]) && saved[key].length > 0) {
+        var existing = result[key] || [];
+        var logins = {};
+        existing.forEach(function(u) { logins[u.login] = u; });
+        saved[key].forEach(function(u) { if (!logins[u.login]) { logins[u.login] = u; existing.push(u); } });
+        result[key] = existing;
+      }
+    } else if (Array.isArray(saved[key])) {
       if (saved[key].length > 0) result[key] = saved[key];
     } else if (typeof saved[key] === 'object' && saved[key] !== null) {
       result[key] = { ...(result[key] || {}), ...saved[key] };
@@ -1110,6 +1123,31 @@ function updateDate() {
   document.getElementById('topbar-date').textContent = new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 }
 
+var APP_REPO = 'ashrak0104-spec/Biozar';
+function checkAppUpdate() {
+  var localVer = state.version || '1.0.0';
+  var isNative = window.capacitor || window.Capacitor || navigator.userAgent.includes('Android');
+  if (!isNative) return;
+  fetch('https://api.github.com/repos/' + APP_REPO + '/releases/tags/apk-latest').then(function(r) { return r.json(); }).then(function(data) {
+    var remoteVer = (data.tag_name || data.name || '').replace(/^v/i, '');
+    if (!remoteVer) return;
+    if (remoteVer !== localVer) {
+      var existing = document.getElementById('update-banner');
+      if (existing) return;
+      var banner = document.createElement('div');
+      banner.id = 'update-banner';
+      banner.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--red);color:#fff;padding:14px 24px;border-radius:12px;font-weight:600;z-index:999;box-shadow:0 8px 32px rgba(0,0,0,.3);cursor:pointer;text-align:center;max-width:90%;animation:fadeIn .3s';
+      banner.innerHTML = '🆕 Mise \u00e0 jour disponible !<br><span style="font-size:12px;opacity:.8">Toucher pour installer</span>';
+      banner.onclick = function() {
+        var apkUrl = 'https://github.com/' + APP_REPO + '/releases/latest/download/app-release.apk';
+        window.open(apkUrl, '_system');
+        banner.style.display = 'none';
+      };
+      document.body.appendChild(banner);
+    }
+  }).catch(function() {});
+}
+
 // ═══════════════════ PAGE NAV ═══════════════════
 function showPage(name) {
   if (state.currentRole && !isPageAllowed(name)) {
@@ -1181,6 +1219,7 @@ function doLogin() {
   applyTheme();
   showPage('dashboard');
   showToast('Bienvenue ' + user.name + ' !');
+  checkAppUpdate();
 }
 
 function doLogout() {
@@ -1755,9 +1794,8 @@ function exportUsageCSV() {
   });
   
   // Download
-  var csv = lines.join('
-');
-  var blob = new Blob([﻿ + csv], { type: 'text/csv;charset=utf-8;' });
+  var csv = lines.join('\n');
+  var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   var url = URL.createObjectURL(blob);
   var a = document.createElement('a');
   a.href = url;
@@ -2196,6 +2234,7 @@ function renderAll() {
   renderScenarioList();
   renderAdminProducts();
   renderAdminCharges();
+  renderAdminUsers();
   renderYieldStats();
   renderIncidents();
   renderIntrants();
@@ -2506,20 +2545,17 @@ function saveClient() {
   if (newStatut !== oldStatut) {
     // Log status change to history
     state.statusLog.unshift({ client: c.nom, from: oldStatut, to: newStatut, date: new Date().toISOString().slice(0,10) });
-  }
-  saveState();
+    saveState();
     if (newStatut === 'Abonné') {
       showNotif('Nouvel abonné', c.nom + ' est maintenant abonné ! (était : ' + oldStatut + ')');
       sendWhatsAppAlert('BIOZAR CRM : ' + c.nom + ' est maintenant abonné ! Ancien statut : ' + oldStatut);
     } else if (oldStatut === 'Abonné' && newStatut !== 'Abonné') {
-      showNotif('Désabonnement', c.nom + ' n'est plus abonné (maintenant : ' + newStatut + ')');
+      showNotif('Désabonnement', c.nom + ' n\u2019est plus abonné (maintenant : ' + newStatut + ')');
     } else if (oldStatut === 'Inactif' && newStatut !== 'Inactif') {
       showNotif('Réactivation', c.nom + ' est réactivé ! (maintenant : ' + newStatut + ')');
     }
   }
 }
-
-function switchCrmT
 
 function switchCrmTab(tab) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -3481,6 +3517,98 @@ function renderAdminCharges() {
 }
 
 function updateCharge(key, val) { state.charges[key] = parseFloat(val) || 0; saveState(); }
+function renderAdminUsers() {
+  var list = document.getElementById('admin-users-list');
+  if (!list) return;
+  if (!state.users || state.users.length === 0) {
+    list.innerHTML = '<div class="empty"><div class="empty-icon">👥</div><p>Aucun utilisateur</p></div>';
+    return;
+  }
+  var roleLabels = { admin: 'Admin/Direction', production: 'Chef Production', commercial: 'Commercial', logistics: 'Logistique', operator: 'Agent' };
+  list.innerHTML = state.users.map(function(u, i) {
+    var isSelf = state.currentUser && state.currentUser.login === u.login;
+    var disableSelf = isSelf ? 'disabled' : '';
+    return '<div class="user-edit-row">' +
+      '<input type="text" value="' + u.login + '" id="user-login-' + i + '" placeholder="Login" ' + (isSelf ? 'disabled' : '') + ' />' +
+      '<input type="text" value="' + u.name.replace(/'/g, '&apos;') + '" id="user-name-' + i + '" placeholder="Nom" />' +
+      '<select id="user-role-' + i + '">' +
+        '<option value="admin"' + (u.role === 'admin' ? ' selected' : '') + '>Admin/Direction</option>' +
+        '<option value="production"' + (u.role === 'production' ? ' selected' : '') + '>Chef Production</option>' +
+        '<option value="commercial"' + (u.role === 'commercial' ? ' selected' : '') + '>Commercial</option>' +
+        '<option value="logistics"' + (u.role === 'logistics' ? ' selected' : '') + '>Logistique</option>' +
+        '<option value="operator"' + (u.role === 'operator' ? ' selected' : '') + '>Agent</option>' +
+      '</select>' +
+      '<input type="text" value="' + u.password + '" id="user-pass-' + i + '" placeholder="Mot de passe" />' +
+      '<button class="btn-edit" onclick="updateUser(' + i + ')" ' + disableSelf + '>💾</button>' +
+      '<button class="btn-danger" onclick="deleteUser(' + i + ')" ' + disableSelf + '>🗑️</button>' +
+      '</div>';
+  }).join('');
+}
+function updateUser(idx) {
+  var login = document.getElementById('user-login-' + idx).value.trim();
+  var name = document.getElementById('user-name-' + idx).value.trim();
+  var role = document.getElementById('user-role-' + idx).value;
+  var password = document.getElementById('user-pass-' + idx).value.trim();
+  if (!login || !name || !password) { showToast('Tous les champs sont requis', 'error'); return; }
+  var u = state.users[idx];
+  if (!u) return;
+  if (login !== u.login && state.users.some(function(x) { return x.login === login; })) {
+    showToast('Ce login existe d\u00e9j\u00e0', 'error'); return;
+  }
+  var oldLogin = u.login;
+  u.login = login;
+  u.name = name;
+  u.role = role;
+  u.password = password;
+  if (state.currentUser && state.currentUser.login === oldLogin) {
+    state.currentUser = u;
+    state.currentRole = u.role;
+    state.user = u.login;
+    state.role = u.role;
+    document.getElementById('currentUserLabel').textContent = u.name;
+  }
+  saveState();
+  renderAdminUsers();
+  showToast('Utilisateur modifi\u00e9');
+}
+function deleteUser(idx) {
+  var u = state.users[idx];
+  if (!u) return;
+  if (state.currentUser && state.currentUser.login === u.login) {
+    showToast('Vous ne pouvez pas vous supprimer vous-m\u00eame', 'error'); return;
+  }
+  if (!confirm('Supprimer l\u2019utilisateur ' + u.name + ' ?')) return;
+  state.users.splice(idx, 1);
+  saveState();
+  renderAdminUsers();
+  showToast('Utilisateur supprim\u00e9');
+}
+function showAddUserForm() {
+  document.getElementById('add-user-form').style.display = 'block';
+  document.getElementById('new-user-login').value = '';
+  document.getElementById('new-user-name').value = '';
+  document.getElementById('new-user-role').value = 'commercial';
+  document.getElementById('new-user-pass').value = '';
+  document.getElementById('new-user-login').focus();
+}
+function hideAddUserForm() {
+  document.getElementById('add-user-form').style.display = 'none';
+}
+function addUser() {
+  var login = document.getElementById('new-user-login').value.trim().toLowerCase();
+  var name = document.getElementById('new-user-name').value.trim();
+  var role = document.getElementById('new-user-role').value;
+  var password = document.getElementById('new-user-pass').value.trim();
+  if (!login || !name || !password) { showToast('Tous les champs sont requis', 'error'); return; }
+  if (state.users.some(function(u) { return u.login === login; })) {
+    showToast('Ce login existe d\u00e9j\u00e0', 'error'); return;
+  }
+  state.users.push({ login: login, name: name, role: role, password: password });
+  saveState();
+  renderAdminUsers();
+  hideAddUserForm();
+  showToast('Utilisateur ' + name + ' ajout\u00e9');
+}
 function renderSyncHistory() {
   var tbody = document.getElementById("sync-history-body");
   var empty = document.getElementById("sync-history-empty");
@@ -3498,7 +3626,7 @@ function renderSyncHistory() {
     var badge = h.status === "ok" ? "badge-green" : "badge-red";
     var label = h.status === "ok" ? "✅ Succès" : "❌ Erreur";
     var tr = document.createElement("tr");
-    tr.innerHTML = "<td>" + (h.date || "—") + "</td><td>" + (h.time || "—") + "</td><td>" + (h.size || "—") + "</td><td><span class="" + badge + "">" + label + "</span></td>";
+    tr.innerHTML = "<td>" + (h.date || "—") + "</td><td>" + (h.time || "—") + "</td><td>" + (h.size || "—") + "</td><td><span class='" + badge + "'>" + label + "</span></td>";
     tbody.appendChild(tr);
   });
   var statsEl = document.getElementById("cloud-stats");
@@ -3506,13 +3634,13 @@ function renderSyncHistory() {
     var okCount = history.filter(function(h){return h.status==="ok"}).length;
     var errCount = history.filter(function(h){return h.status!=="ok"}).length;
     var lastSync = history.length > 0 ? history[0].date + " " + history[0].time : "Jamais";
-    statsEl.innerHTML = "<div style="display:flex;flex-direction:column;gap:10px">" + "<div style="display:flex;justify-content:space-between;font-size:13px"><span>Succès</span><strong style="color:#2d6a35">" + okCount + "</strong></div>" + "<div style="display:flex;justify-content:space-between;font-size:13px"><span>Erreurs</span><strong>" + errCount + "</strong></div>" + "<div style="display:flex;justify-content:space-between;font-size:13px"><span>Dernière sync</span><strong>" + lastSync + "</strong></div>" + "<div style="display:flex;justify-content:space-between;font-size:13px"><span>Projet</span><strong>plavawidmbtryfyausjr</strong></div>" + "</div>";
+    statsEl.innerHTML = '<div style="display:flex;flex-direction:column;gap:10px">' + '<div style="display:flex;justify-content:space-between;font-size:13px"><span>Succès</span><strong style="color:#2d6a35">' + okCount + '</strong></div>' + '<div style="display:flex;justify-content:space-between;font-size:13px"><span>Erreurs</span><strong>' + errCount + '</strong></div>' + '<div style="display:flex;justify-content:space-between;font-size:13px"><span>Dernière sync</span><strong>' + lastSync + '</strong></div>' + '<div style="display:flex;justify-content:space-between;font-size:13px"><span>Projet</span><strong>plavawidmbtryfyausjr</strong></div>' + '</div>';
   }
   var connEl = document.getElementById("cloud-connection-info");
   if (connEl) {
     var online = navigator.onLine;
     var lastEntry = history.length > 0 ? history[0] : null;
-    connEl.innerHTML = "<div style="display:flex;flex-direction:column;gap:10px">" + "<div style="display:flex;justify-content:space-between;font-size:13px"><span>Statut</span><span>" + (online ? "🟢 En ligne" : "🔴 Hors-ligne") + "</span></div>" + "<div style="display:flex;justify-content:space-between;font-size:13px"><span>Provider</span><strong>Supabase</strong></div>" + "<div style="display:flex;justify-content:space-between;font-size:13px"><span>Dernière taille</span><strong>" + (lastEntry ? lastEntry.size : "—") + "</strong></div>" + "<div style="display:flex;justify-content:space-between;font-size:13px"><span>Version app</span><strong>v" + state.version + "</strong></div>" + "</div>";
+    connEl.innerHTML = '<div style="display:flex;flex-direction:column;gap:10px">' + '<div style="display:flex;justify-content:space-between;font-size:13px"><span>Statut</span><span>' + (online ? "🟢 En ligne" : "🔴 Hors-ligne") + '</span></div>' + '<div style="display:flex;justify-content:space-between;font-size:13px"><span>Provider</span><strong>Supabase</strong></div>' + '<div style="display:flex;justify-content:space-between;font-size:13px"><span>Dernière taille</span><strong>' + (lastEntry ? lastEntry.size : "—") + '</strong></div>' + '<div style="display:flex;justify-content:space-between;font-size:13px"><span>Version app</span><strong>v' + state.version + '</strong></div>' + '</div>';
   }
 }
 function updateProdPrice(idx, val) { state.products[idx].price = parseFloat(val) || 0; saveState(); renderProducts(); }
@@ -3521,12 +3649,12 @@ function deleteProduct(idx) { if (confirm('Supprimer ' + state.products[idx].nam
 
 async function changePassword() {
   const pwd = document.getElementById("new-password").value.trim();
-  if (!pwd || pwd.length < 4) { showToast("Minimum 4 caract00e8res.", "error"); return; }
+  if (!pwd || pwd.length < 4) { showToast("Minimum 4 caractères.", "error"); return; }
   const hashed = await sha256(pwd);
   state.password = hashed;
   try { localStorage.setItem("biozar_password", hashed); } catch(e) {}
   saveState();
-  showToast("Mot de passe chang00e9 !");
+  showToast("Mot de passe changé !");
   document.getElementById("new-password").value = "";
 }
 function exportJSON() {
@@ -3576,15 +3704,6 @@ function requestNotifPermission() {
 }
 
 // ═══════════════════ SERVICE WORKER ═══════════════════
-// Login check
-if (state.currentUser) {
-  applyRoleAccess(state.currentRole);
-  var ls = document.getElementById('login-screen');
-  if (ls) ls.style.display = 'none';
-} else {
-  var ls = document.getElementById('login-screen');
-  if (ls) ls.style.display = 'flex';
-}
 // Track session
 trackSession();
 window.addEventListener('beforeunload', function() { endSession(); });
@@ -3596,6 +3715,24 @@ if ('serviceWorker' in navigator) {
 // ═══════════════════ INIT ═══════════════════
 loadState();
 updateDate();
+
+// État chargé : afficher la bonne interface
+if (state.currentUser) {
+  document.body.classList.add('role-' + state.currentRole);
+  applyRoleAccess(state.currentRole);
+  var ls = document.getElementById('login-screen');
+  if (ls) ls.style.display = 'none';
+  renderAll();
+  updateDate();
+  initCharts();
+  initCloudMonitor();
+  loadAutoExportConfig();
+  loadWhatsAppSettings();
+  checkAppUpdate();
+} else {
+  var ls = document.getElementById('login-screen');
+  if (ls) ls.style.display = 'flex';
+}
 
 // Hide splash
 setTimeout(() => {

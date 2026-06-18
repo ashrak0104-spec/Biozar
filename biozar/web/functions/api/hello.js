@@ -12,7 +12,7 @@ export async function onRequest(context) {
 
   const data = {
     message: "BIOZAR API is ready!",
-    version: "1.0.1",
+    version: "1.1.1",
     status: "healthy",
     timestamp: new Date().toISOString(),
     endpoints: {

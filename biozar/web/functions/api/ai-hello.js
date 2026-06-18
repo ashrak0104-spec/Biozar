@@ -7,7 +7,7 @@
 export async function onRequest(context) {
   const data = {
     message: "BIOZAR AI helper is online.",
-    version: "1.0.1",
+    version: "1.1.1",
     status: "healthy"
   };
 
