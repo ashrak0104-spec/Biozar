@@ -37,12 +37,11 @@ jobs:
       - name: 🤖 Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: 📋 Créer le keystore de signature
+      - name: 📋 Restaurer le keystore de signature
+        env:
+          KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
         run: |
-          keytool -genkey -v -keystore android/app/biozar-release.keystore \
-            -alias biozar -keyalg RSA -keysize 2048 -validity 10000 \
-            -storepass biozar2026 -keypass biozar2026 \
-            -dname "CN=BIOZAR, OU=Dev, O=BIOZAR, L=Antananarivo, S=Madagascar, C=MG"
+          echo "$KEYSTORE_B64" | base64 -d > android/app/biozar-release.keystore
 
       - name: 📦 Installer les dépendances
         run: npm install
@@ -51,6 +50,9 @@ jobs:
         run: npm run build
 
       - name: 🔨 Builder l'APK Release
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: cd android && ./gradlew assembleRelease
 
       - name: 📤 Upload APK (artifact)

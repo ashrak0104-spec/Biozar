@@ -1197,8 +1197,44 @@ function doLogin() {
   var pass = document.getElementById('login-pass').value;
   var errEl = document.getElementById('login-error');
   if (!login || !pass) { errEl.textContent = 'Veuillez remplir tous les champs'; errEl.style.display = 'block'; return; }
-  var user = (state.users || []).find(function(u) { return u.login === login && u.password === pass; });
-  if (!user) { errEl.textContent = 'Login ou mot de passe incorrect'; errEl.style.display = 'block'; return; }
+  setLoginLoading(true);
+  doLoginAsync(login, pass, errEl);
+}
+function setLoginLoading(loading) {
+  var btn = document.querySelector('#login-screen .btn-primary');
+  if (btn) { btn.textContent = loading ? 'Connexion...' : 'Se connecter'; btn.disabled = loading; }
+}
+async function doLoginAsync(login, pass, errEl) {
+  var user = null;
+  if (window.BIOZAR_AUTH && window.BIOZAR_AUTH.ready) {
+    try {
+      var authResult = await window.BIOZAR_AUTH.signIn(login, pass);
+      if (authResult && authResult.user) {
+        var profile = authResult.profile;
+        if (authResult.accessToken) {
+          var serverProfile = await window.BIOZAR_AUTH.getProfile(authResult.user.id, authResult.accessToken);
+          if (serverProfile) profile = serverProfile;
+        }
+        user = {
+          login: authResult.user.email,
+          name: profile.name || authResult.user.email,
+          role: profile.role || 'operator',
+          password: pass,
+          supabaseId: authResult.user.id,
+          accessToken: authResult.accessToken
+        };
+      }
+    } catch(e) {}
+  }
+  if (!user) {
+    user = (state.users || []).find(function(u) { return u.login === login && u.password === pass; });
+  }
+  if (!user) {
+    errEl.textContent = 'Login ou mot de passe incorrect';
+    errEl.style.display = 'block';
+    setLoginLoading(false);
+    return;
+  }
   state.currentUser = user;
   state.currentRole = user.role;
   state.user = user.login;
@@ -1209,6 +1245,7 @@ function doLogin() {
   if (ls) ls.style.display = 'none';
   document.body.classList.remove('locked');
   document.body.className = 'role-' + user.role;
+  setLoginLoading(false);
   applyRoleAccess(user.role);
   renderAll();
   updateDate();
@@ -3603,10 +3640,21 @@ function addUser() {
   if (state.users.some(function(u) { return u.login === login; })) {
     showToast('Ce login existe d\u00e9j\u00e0', 'error'); return;
   }
+  var btn = document.querySelector('#add-user-form .btn-admin');
+  btn.textContent = 'Création...'; btn.disabled = true;
+  addUserAsync(login, name, role, password, btn);
+}
+async function addUserAsync(login, name, role, password, btn) {
+  if (window.BIOZAR_AUTH && window.BIOZAR_AUTH.ready) {
+    try {
+      await window.BIOZAR_AUTH.signUp(login, password, name, role);
+    } catch(e) { showToast('Erreur création compte Supabase', 'error'); }
+  }
   state.users.push({ login: login, name: name, role: role, password: password });
   saveState();
   renderAdminUsers();
   hideAddUserForm();
+  btn.textContent = '💾 Ajouter'; btn.disabled = false;
   showToast('Utilisateur ' + name + ' ajout\u00e9');
 }
 function renderSyncHistory() {

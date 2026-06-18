@@ -58,7 +58,86 @@ async function supabaseFetch(path, options = {}) {
 //  API PUBLIQUE (compatible avec l'ancienne API BIOZAR_FIREBASE)
 // ══════════════════════════════════════════════════════════════
 
+function supabaseAuthFetch(path, options = {}) {
+  if (!isConfigured()) return null;
+  const url = `${supabaseConfig.url}/auth/v1${path}`;
+  const headers = {
+    'Content-Type': 'application/json',
+    'apikey': supabaseConfig.anonKey,
+    ...options.headers
+  };
+  return fetch(url, { ...options, headers });
+}
+
 const SupabaseAPI = {
+  /** Authentifier un utilisateur par email/mot de passe */
+  signIn: async function(email, password) {
+    if (!isConfigured()) return null;
+    const res = await supabaseAuthFetch('/token?grant_type=password', {
+      method: 'POST',
+      body: JSON.stringify({ email, password, gotrue_meta_security: {} })
+    });
+    if (!res || !res.ok) return null;
+    const data = await res.json();
+    return {
+      accessToken: data.access_token,
+      refreshToken: data.refresh_token,
+      user: data.user,
+      profile: data.user?.user_metadata || {}
+    };
+  },
+
+  /** Créer un nouveau compte utilisateur */
+  signUp: async function(email, password, name, role) {
+    if (!isConfigured()) return null;
+    const res = await supabaseAuthFetch('/signup', {
+      method: 'POST',
+      body: JSON.stringify({
+        email,
+        password,
+        data: { name, role: role || 'operator' }
+      })
+    });
+    if (!res || !res.ok) return null;
+    return await res.json();
+  },
+
+  /** Récupérer le profil (rôle) depuis la table profiles */
+  getProfile: async function(userId, accessToken) {
+    if (!isConfigured()) return null;
+    const res = await supabaseFetch(
+      `/profiles?id=eq.${userId}&select=id,email,name,role`,
+      { headers: { 'Authorization': `Bearer ${accessToken}` } }
+    );
+    if (!res) return null;
+    const rows = await res.json();
+    return rows && rows.length > 0 ? rows[0] : null;
+  },
+
+  /** Lister tous les profils (admin seulement) */
+  listProfiles: async function(accessToken) {
+    if (!isConfigured()) return null;
+    const res = await supabaseFetch('/profiles?select=id,email,name,role,created_at&order=created_at.asc', {
+      headers: { 'Authorization': `Bearer ${accessToken}` }
+    });
+    if (!res) return [];
+    return await res.json();
+  },
+
+  /** Mettre à jour un profil (admin) */
+  updateProfile: async function(userId, data, accessToken) {
+    if (!isConfigured()) return false;
+    const res = await supabaseFetch(`/profiles?id=eq.${userId}`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify(data)
+    });
+    return res !== null && res.ok;
+  },
+
   /** Sauvegarder l'état complet dans Supabase */
   saveStateToFirestore: async function(state) {
     if (!isConfigured()) return false;
@@ -145,6 +224,16 @@ window.BIOZAR_FIREBASE = {
   }, 800),
   loadStateFromFirestore: SupabaseAPI.loadStateFromFirestore,
   saveBackupState: SupabaseAPI.saveBackupState
+};
+
+// Interface Auth simplifiée
+window.BIOZAR_AUTH = {
+  signIn: SupabaseAPI.signIn,
+  signUp: SupabaseAPI.signUp,
+  getProfile: SupabaseAPI.getProfile,
+  listProfiles: SupabaseAPI.listProfiles,
+  updateProfile: SupabaseAPI.updateProfile,
+  ready: isConfigured()
 };
 
 // Nouvelle interface Supabase directe
