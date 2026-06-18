@@ -35,7 +35,9 @@ jobs:
         uses: android-actions/setup-android@v3
 
       - name: 📋 Restaurer le keystore de signature
-        run: echo "JH=$JAVA_HOME" && echo "KT=$(which keytool)" && "$JAVA_HOME/bin/keytool" -genkey -v -keystore biozar-app/android/app/biozar-release.keystore -alias biozar -keyalg RSA -keysize 2048 -validity 10000 -storepass biozar2026 -keypass biozar2026 -dname "CN=Biozar" && ls -la biozar-app/android/app/biozar-release.keystore
+        run: |
+          echo "JH=$JAVA_HOME"
+          echo "ok"
 
       - name: 📦 Installer les dépendances
         run: npm install
