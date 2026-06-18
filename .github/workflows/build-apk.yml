@@ -41,9 +41,7 @@ jobs:
         env:
           KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
         run: |
-          echo "KEYSTORE_B64 length: $(echo -n "$KEYSTORE_B64" | wc -c)"
-          echo -n "$KEYSTORE_B64" > /tmp/ks.b64
-          base64 -d /tmp/ks.b64 > android/app/biozar-release.keystore
+          printf '%s' "$KEYSTORE_B64" | base64 --decode > android/app/biozar-release.keystore
           ls -la android/app/biozar-release.keystore
 
       - name: 📦 Installer les dépendances
