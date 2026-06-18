@@ -41,20 +41,7 @@ jobs:
         env:
           KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
         run: |
-          echo "Secret length: $(printf '%s' "$KEYSTORE_B64" | wc -c) chars"
-          if [ -z "$KEYSTORE_B64" ]; then echo "KEYSTORE_B64 is empty"; exit 1; fi
-          python3 << 'PYEOF'
-import os, base64
-data = os.environ.get('KEYSTORE_B64', '')
-if not data:
-    print('KEYSTORE_B64 env var not found')
-    exit(1)
-decoded = base64.b64decode(data)
-with open('android/app/biozar-release.keystore', 'wb') as f:
-    f.write(decoded)
-import os.path as p
-print('Keystore:', p.getsize('android/app/biozar-release.keystore'), 'bytes')
-PYEOF
+          python3 -c "import os,base64; d=os.environ.get('KEYSTORE_B64',''); assert d, 'KEYSTORE_B64 is empty'; open('android/app/biozar-release.keystore','wb').write(base64.b64decode(d)); import os.path; print('Keystore:',os.path.getsize('android/app/biozar-release.keystore'),'bytes')"
 
       - name: 📦 Installer les dépendances
         run: npm install
