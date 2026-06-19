@@ -10,6 +10,7 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co; frame-src 'self';" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet" />
   <script src="chart.js"></script>
@@ -258,7 +259,7 @@
 <!-- SPLASH SCREEN -->
 <div id="appSplash" style="position:fixed;inset:0;z-index:10000;background:linear-gradient(145deg,#0f2612,#1a3d1f 40%,#2d6a35);display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .8s ease;opacity:1">
   <div style="animation:fadeIn 1s ease;text-align:center">
-    <img src="../logo BIOZAR.png" alt="BIOZAR Logo" style="width:200px;height:200px;object-fit:contain;margin:0 auto 20px;">
+    <img src="icons/logo-biozar.png" alt="BIOZAR Logo" style="width:200px;height:200px;object-fit:contain;margin:0 auto 20px;">
     <h1 style="font-family:'Playfair Display',serif;font-size:42px;color:#fff;letter-spacing:-0.5px">BIOZAR</h1>
     <p style="color:rgba(255,255,255,0.55);font-size:15px;letter-spacing:2px;text-transform:uppercase;margin-top:6px">Bio de Madagascar</p>
   </div>
@@ -808,7 +809,7 @@ let state = {
   ],
   user: null,
   role: null,
-  password: 'biozar2026',
+  password: null,
   whatsappEnabled: false,
   whatsappPhone: '',
   statusLog: [
@@ -825,13 +826,13 @@ let state = {
   currentUser: null,
   currentRole: null,
   users: [
-    { login: 'admin', name: 'Admin Direction', role: 'admin', password: 'biozar2026' },
-    { login: 'jean', name: 'Jean Admin', role: 'admin', password: 'biozar2026' },
-    { login: 'production', name: 'Chef Production', role: 'production', password: 'prod2026' },
-    { login: 'commercial', name: 'Commercial', role: 'commercial', password: 'comm2026' },
-    { login: 'pascal', name: 'Pascal Commercial', role: 'commercial', password: 'comm2026' },
-    { login: 'logistique', name: 'Logistique', role: 'logistics', password: 'logi2026' },
-    { login: 'agent', name: 'Agent', role: 'operator', password: 'agent2026' },
+    { login: 'admin', name: 'Admin Direction', role: 'admin', passwordHash: 'f2117626cb3800365e06eb9decafeabb1f6c0401afd4b08f1e888561bad2d302' },
+    { login: 'jean', name: 'Jean Admin', role: 'admin', passwordHash: 'f2117626cb3800365e06eb9decafeabb1f6c0401afd4b08f1e888561bad2d302' },
+    { login: 'production', name: 'Chef Production', role: 'production', passwordHash: '58e969fe04ca7b020ce4d21f4a4998122f8561c72f942516b6271bba0f1689ac' },
+    { login: 'commercial', name: 'Commercial', role: 'commercial', passwordHash: '792b8c73c28e1aef470d463b3cc44c814c3fc70636fe51f8c1fae8fb45bab860' },
+    { login: 'pascal', name: 'Pascal Commercial', role: 'commercial', passwordHash: '792b8c73c28e1aef470d463b3cc44c814c3fc70636fe51f8c1fae8fb45bab860' },
+    { login: 'logistique', name: 'Logistique', role: 'logistics', passwordHash: 'b4cda9b41c79304e8d40fdef0bbe6b070b3a601d19fc14110f8a7bef9d8c861c' },
+    { login: 'agent', name: 'Agent', role: 'operator', passwordHash: 'a96fc074e25bdf002b08db51688454b2d22402841c73322124f48e164906fcfa' },
   ],
   roleConfig: {
     admin:       { label: '👨\u200d💼 Admin/Direction', pages: ['dashboard','finances','production','clients','produits','marketing','reporting','risques','bmc','notifications','analytics','admin','commandes','parcelles','factures','meteo','prix-marche'] },
@@ -1019,7 +1020,7 @@ function renderNotifications() {
 function saveState() {
   try {
     const s = JSON.parse(JSON.stringify(state));
-    delete s.user; delete s.role; delete s.password; delete s.syncHistory;
+    delete s.user; delete s.role; delete s.password; delete s.passwordHashed; delete s.syncHistory;
     localStorage.setItem('biozar_state', JSON.stringify(s));
     if (window.BIOZAR_FIREBASE?.saveStateToFirestore && navigator.onLine) {
       const sizeKb = (JSON.stringify(s).length / 1024).toFixed(1);
@@ -1080,8 +1081,6 @@ async function loadState() {
     }
     applyTheme();
   } catch(e) {}
-  const stored = localStorage.getItem('biozar_password');
-  if (stored) state.password = stored;
   const seen = localStorage.getItem('biozar_seen_incidents');
   if (seen) state.seenIncidents = JSON.parse(seen);
   const sc = localStorage.getItem('biozar_scenarios');
@@ -1224,6 +1223,21 @@ function hideLoginScreen() {
   if (el) el.style.display = 'none';
 }
 
+// ═══════════════════ LOGIN RATE LIMITING ═══════════════════
+const LOGIN_MAX_ATTEMPTS = 5;
+const LOGIN_LOCKOUT_MS = 300000; // 5 minutes
+let loginAttempts = 0;
+let loginLockedUntil = null;
+
+function isLoginLocked() {
+  if (loginLockedUntil && Date.now() < loginLockedUntil) {
+    return Math.ceil((loginLockedUntil - Date.now()) / 1000);
+  }
+  loginLockedUntil = null;
+  loginAttempts = 0;
+  return 0;
+}
+
 function doLogin() {
   var login = document.getElementById('login-user').value.trim().toLowerCase();
   var pass = document.getElementById('login-pass').value;
@@ -1259,7 +1273,8 @@ async function doLoginAsync(login, pass, errEl) {
     } catch(e) {}
   }
   if (!user) {
-    user = (state.users || []).find(function(u) { return u.login === login && u.password === pass; });
+        var passHash = await sha256(pass);
+    user = (state.users || []).find(function(u) { return u.login === login && (u.passwordHash === passHash); });
   }
   if (!user) {
     errEl.textContent = 'Login ou mot de passe incorrect';
@@ -3682,7 +3697,8 @@ async function addUserAsync(login, name, role, password, btn) {
       await window.BIOZAR_AUTH.signUp(login, password, name, role);
     } catch(e) { showToast('Erreur création compte Supabase', 'error'); }
   }
-  state.users.push({ login: login, name: name, role: role, password: password });
+    var passHash = await sha256(password);
+  state.users.push({ login: login, name: name, role: role, passwordHash: passHash });
   saveState();
   renderAdminUsers();
   hideAddUserForm();
@@ -3730,11 +3746,17 @@ function deleteProduct(idx) { if (confirm('Supprimer ' + state.products[idx].nam
 async function changePassword() {
   const pwd = document.getElementById("new-password").value.trim();
   if (!pwd || pwd.length < 4) { showToast("Minimum 4 caractères.", "error"); return; }
+  if (!state.currentUser) { showToast("Aucun utilisateur connecté.", "error"); return; }
   const hashed = await sha256(pwd);
-  state.password = hashed;
-  try { localStorage.setItem("biozar_password", hashed); } catch(e) {}
-  saveState();
-  showToast("Mot de passe changé !");
+  // Update the current user's passwordHash in the users array
+  var userIdx = state.users.findIndex(function(u) { return u.login === state.currentUser.login; });
+  if (userIdx >= 0) {
+    state.users[userIdx].passwordHash = hashed;
+    saveState();
+    showToast("Mot de passe changé !");
+  } else {
+    showToast("Utilisateur non trouvé.", "error");
+  }
   document.getElementById("new-password").value = "";
 }
 function exportJSON() {

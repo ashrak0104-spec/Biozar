@@ -1,0 +1,55 @@
+# ═══════════════════════════════════════════════════════════════
+#  wrangler.toml — Configuration Cloudflare Pages / Workers
+#  Projet : BIOZAR (Console de Pilotage Bio)
+#  Site   : https://biozar.pages.dev
+# ═══════════════════════════════════════════════════════════════
+# Documentation : https://developers.cloudflare.com/pages/
+
+name = "biozar"
+compatibility_date = "2026-06-01"
+
+# ==============================================================
+#  Pages Configuration
+# ==============================================================
+pages_build_output_dir = "biozar/web"
+
+# ==============================================================
+#  Compatibility Flags (pour les APIs modernes)
+# ==============================================================
+compatibility_flags = ["nodejs_compat"]
+
+# ==============================================================
+#  Routes des Cloudflare Pages Functions
+#  Les fichiers sources sont dans biozar/web/functions/
+#  Les routes sont automatiquement détectées par Cloudflare Pages
+#  selon la structure des dossiers
+# ==============================================================
+#  Endpoints disponibles :
+#  /api/config    → biozar/web/functions/api/config.js
+#  /api/health    → biozar/web/functions/api/health.js
+#  /api/hello     → biozar/web/functions/api/hello.js
+#  /api/ai-hello  → biozar/web/functions/api/ai-hello.js
+
+# ==============================================================
+#  Variables d'environnement
+#  Définies dans le dashboard Cloudflare :
+#  https://dash.cloudflare.com/<account>/pages/view/biozar/settings/environment-variables
+# ==============================================================
+# [vars]
+# SUPABASE_URL = "https://plavawidmbtryfyausjr.supabase.co"
+# SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+
+# ==============================================================
+#  Secrets (définis via `wrangler pages secret put`)
+#  Usage : npx wrangler pages secret put <KEY> --name biozar
+# ==============================================================
+# SUPABASE_JWT_SECRET (optionnel, pour les Functions)
+# CLOUDFLARE_API_TOKEN (pour le déploiement GitHub Actions)
+
+# ==============================================================
+#  Déploiement
+# ==============================================================
+#  GitHub Actions : .github/workflows/deploy.yml
+#  Commande manuelle : npx wrangler pages deploy biozar/web --project-name=biozar
+#  Preview : npx wrangler pages dev biozar/web
+#  Dashboard : https://dash.cloudflare.com/?to=/:account/pages/view/biozar

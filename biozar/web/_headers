@@ -1,0 +1,35 @@
+# ═══════════════════════════════════════
+#  BIOZAR — En-têtes de sécurité HTTP
+#  Cloudflare Pages _headers
+# ═══════════════════════════════════════
+# Documentation : https://developers.cloudflare.com/pages/configuration/headers/
+
+# Règles globales
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(self), payment=()
+  Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+  Cache-Control: public, max-age=0, must-revalidate
+
+# Les fichiers statiques (icônes, images) peuvent être mis en cache plus longtemps
+/icons/*
+  Cache-Control: public, max-age=86400, immutable
+
+*.png
+  Cache-Control: public, max-age=86400, immutable
+
+*.jpg
+  Cache-Control: public, max-age=86400, immutable
+
+*.svg
+  Cache-Control: public, max-age=86400, immutable
+
+# Service Worker - ne doit pas être mis en cache
+/sw.js
+  Cache-Control: no-cache, no-store, must-revalidate
+
+# Manifest
+/manifest.json
+  Cache-Control: public, max-age=3600

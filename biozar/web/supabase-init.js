@@ -16,10 +16,55 @@
       );
 */
 
+// ══════════════════════════════════════════════════════════════
+//  CONFIGURATION DYNAMIQUE (Cloudflare Pages Env Vars)
+//  Priorité : 1. /api/config (env vars)  2. Valeurs par défaut
+// ══════════════════════════════════════════════════════════════
+
+let _supabaseConfig = null;
+let _configLoaded = false;
+
+async function loadSupabaseConfig() {
+  if (_configLoaded) return _supabaseConfig;
+  _configLoaded = true;
+  try {
+    // Timeout de 3s pour éviter une attente bloquante
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3000);
+    const res = await fetch('/api/config', { signal: controller.signal });
+    clearTimeout(timeout);
+    if (res && res.ok) {
+      const data = await res.json();
+      if (data.configured && data.url && data.anonKey) {
+        _supabaseConfig = { url: data.url, anonKey: data.anonKey };
+        console.info('[BIOZAR] Config chargée depuis Cloudflare env vars');
+        return _supabaseConfig;
+      }
+    }
+  } catch(e) {
+    // Fallback silencieux aux valeurs par défaut
+    // Note: _configLoaded reste true pour éviter de répéter les appels
+  }
+  // Fallback aux valeurs par défaut hardcodées
+  _supabaseConfig = null;
+  return _supabaseConfig;
+}
+
+
+// Configuration par défaut (fallback si pas de Cloudflare env vars)
 const supabaseConfig = {
   url: 'https://plavawidmbtryfyausjr.supabase.co',
   anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsYXZhd2lkbWJ0cnlmeWF1c2pyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MTk5OTMsImV4cCI6MjA5NjE5NTk5M30.C_l04kOX3ZqJ9O_j4nhokL7QaspRQY83Tpyn8XefNVk'
 };
+
+// Active la config dynamique si disponible depuis l'API
+loadSupabaseConfig().then(function(dynamicConfig) {
+  if (dynamicConfig) {
+    supabaseConfig.url = dynamicConfig.url;
+    supabaseConfig.anonKey = dynamicConfig.anonKey;
+    console.info('[BIOZAR] ✓ Configuration Supabase mise à jour depuis le cloud');
+  }
+});
 
 // ══════════════════════════════════════════════════════════════
 //  SUPABASE REST CLIENT (sans SDK, via fetch simple)
@@ -233,7 +278,7 @@ window.BIOZAR_AUTH = {
   getProfile: SupabaseAPI.getProfile,
   listProfiles: SupabaseAPI.listProfiles,
   updateProfile: SupabaseAPI.updateProfile,
-  ready: isConfigured()
+  get ready() { return isConfigured(); }
 };
 
 // Nouvelle interface Supabase directe

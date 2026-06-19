@@ -36,7 +36,14 @@ jobs:
 
       - name: 📋 Restaurer le keystore de signature
         shell: bash
-        run: echo "hello"
+        run: |
+          if [ -f keystore-b64.txt ]; then
+            echo "🔑 Décodage du keystore..."
+            base64 -d keystore-b64.txt > biozar-app/android/app/biozar-release.keystore
+            echo "✅ Keystore restauré dans android/app/ ("$(wc -c < biozar-app/android/app/biozar-release.keystore)" octets)"
+          else
+            echo "⚠️ keystore-b64.txt introuvable, utilisation du keystore local si existant"
+          fi
 
       - name: 📦 Installer les dépendances
         run: npm install
@@ -50,11 +57,22 @@ jobs:
         run: npx cap sync --verbose 2>&1
         working-directory: biozar-app
 
+      - name: 🔧 Permissions Gradlew
+        run: chmod +x gradlew
+        working-directory: biozar-app/android
+
+      - name: ✅ Vérifier les outils
+        shell: bash
+        run: |
+          echo "☕ Java: $(java -version 2>&1 | head -1)"
+          echo "🏗️  Gradle: $(cd biozar-app/android && ./gradlew --version 2>&1 | grep 'Gradle ' | head -1 || echo 'version inconnue')"
+          echo "📱 ANDROID_HOME: ${ANDROID_HOME:-non défini}"
+
       - name: 🔨 Builder l'APK Release
         env:
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: cd biozar-app/android && ./gradlew assembleRelease
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD || 'biozar2026' }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD || 'biozar2026' }}
+        run: cd biozar-app/android && ./gradlew assembleRelease --no-daemon
 
       - name: 📤 Upload APK (artifact)
         uses: actions/upload-artifact@v4

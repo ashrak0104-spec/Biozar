@@ -1,0 +1,11 @@
+# ═══════════════════════════════════════
+#  BIOZAR — Redirections Cloudflare Pages
+#  Routage SPA : toutes les pages → index.html
+# ═══════════════════════════════════════
+# Documentation : https://developers.cloudflare.com/pages/configuration/redirects/
+
+# Les fichiers statiques et API routes sont servis normalement
+# Les autres routes (SPA) redirigent vers index.html
+
+/api/*    /api/:splat   200
+/*        /index.html   200
