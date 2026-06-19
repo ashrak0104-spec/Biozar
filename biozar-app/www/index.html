@@ -10,6 +10,7 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co; frame-src 'self';" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet" />
   <script src="chart.js"></script>
@@ -218,8 +219,200 @@
     .export-btn{display:flex;align-items:center;gap:10px;padding:14px 20px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface);cursor:pointer;font-size:14px;font-weight:600;transition:all .2s;margin-bottom:10px;width:100%}
     .export-btn:hover{border-color:var(--green-light);background:var(--green-pale)}
     .menu-btn{display:none;position:fixed;top:16px;left:16px;z-index:200;background:var(--green-dark);color:#fff;border:none;width:42px;height:42px;border-radius:10px;font-size:20px;cursor:pointer}
-    @media(max-width:900px){.sidebar{transform:translateX(-100%)}.sidebar.open{transform:translateX(0)}.main{margin-left:0}.menu-btn{display:flex}.two-col,.three-col{grid-template-columns:1fr}.content{padding:16px;padding-top:70px}.form-row{grid-template-columns:1fr}.notif-item{padding:10px 12px;gap:8px}.notif-item .notif-title{font-size:12px}.notif-item .notif-body{font-size:11px}.notif-item .notif-date{font-size:10px}.notif-item .notif-read-btn{font-size:16px;padding:4px 8px;min-height:36px;min-width:36px}.notif-dot{width:7px;height:7px;margin-top:4px}#page-notifications .card-header{flex-direction:column;gap:10px;align-items:flex-start}#page-notifications .card-header div:last-child{display:flex;gap:6px;width:100%}#page-notifications .card-header div:last-child button{flex:1}#notif-list{max-height:calc(100vh - 220px)!important}.section-header h2{font-size:20px}.section-header p{font-size:12px}}
-    @media(max-width:480px){.notif-item{padding:8px 10px;gap:6px;min-height:44px}.notif-item .notif-title{font-size:12px;font-weight:700}.notif-item .notif-body{font-size:11px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.notif-item .notif-read-btn{font-size:18px;min-height:40px;min-width:40px;padding:6px 10px}.notif-badge{font-size:9px;min-width:16px;height:16px}#page-notifications .card-header div:last-child{flex-direction:column}#page-notifications .card-header div:last-child button{width:100%}}
+    /* ═══════════════════ RESPONSIVE BREAKPOINTS ═══════════════════ */
+    /* Large tablets / small desktops (≤1024px) */
+    @media(max-width:1024px){
+      .stat-banner-numbers{gap:20px}
+      .stat-num .val{font-size:22px}
+      .stat-num .lbl{font-size:11px}
+      .admin-tabs{overflow-x:auto;flex-wrap:nowrap;gap:6px;padding-bottom:4px;-webkit-overflow-scrolling:touch}
+      .admin-tab{white-space:nowrap;padding:8px 14px;font-size:12px}
+      .kpi-value{font-size:22px}
+      .kpi-card{padding:20px}
+      .kpi-grid{grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px}
+    }
+    /* Tablets & small screens (≤900px) */
+    @media(max-width:900px){
+      .sidebar{transform:translateX(-100%)}
+      .sidebar.open{transform:translateX(0)}
+      .main{margin-left:0}
+      .menu-btn{display:flex}
+      .two-col,.three-col{grid-template-columns:1fr}
+      .content{padding:16px;padding-top:70px}
+      .form-row{grid-template-columns:1fr}
+      .notif-item{padding:10px 12px;gap:8px}
+      .notif-item .notif-title{font-size:12px}
+      .notif-item .notif-body{font-size:11px}
+      .notif-item .notif-date{font-size:10px}
+      .notif-item .notif-read-btn{font-size:16px;padding:4px 8px;min-height:36px;min-width:36px}
+      .notif-dot{width:7px;height:7px;margin-top:4px}
+      #page-notifications .card-header{flex-direction:column;gap:10px;align-items:flex-start}
+      #page-notifications .card-header div:last-child{display:flex;gap:6px;width:100%}
+      #page-notifications .card-header div:last-child button{flex:1}
+      #notif-list{max-height:calc(100vh - 220px)!important}
+      .section-header h2{font-size:20px}
+      .section-header p{font-size:12px}
+      .stat-banner{flex-direction:column;align-items:flex-start;gap:16px;padding:20px}
+      .stat-banner-text h2{font-size:20px}
+      .stat-banner-text p{font-size:13px}
+      .stat-banner-numbers{width:100%;justify-content:space-around}
+      .card-header{flex-direction:column;gap:8px;align-items:flex-start}
+      .card-header div:last-child{width:100%}
+      .topbar{padding:12px 16px}
+      .topbar-title{font-size:16px}
+      .topbar-right{gap:6px}
+      .topbar-date{display:none}
+      .topbar-badge{font-size:10px;padding:4px 10px}
+      .week-cards{grid-template-columns:1fr}
+      .bmc-3col,.bmc-2col{grid-template-columns:1fr!important}
+      .chart-wrap{height:200px!important}
+      #exp-progress-container-fixed{width:calc(100vw - 32px);right:16px;top:auto;bottom:80px}
+      .three-col-equal{grid-template-columns:1fr}
+      .three-col{grid-template-columns:1fr}
+      .kanban-col{min-width:auto}
+      #crm-kanban-board{overflow-x:auto;min-width:0;flex-wrap:nowrap;gap:10px}
+      #crm-kanban-board .kanban-col{min-width:220px;max-width:280px;flex-shrink:0}
+      .data-table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch}
+      .product-edit-row{grid-template-columns:1fr 1fr;gap:8px}
+      .user-edit-row{grid-template-columns:1fr 1fr;gap:8px}
+      .charge-edit-row{grid-template-columns:1fr}
+      .modal-box{padding:24px;width:calc(100vw - 24px);max-width:400px}
+      .prod-modal{padding:24px;width:calc(100vw - 24px);max-width:440px}
+      .toast-container{bottom:16px;right:16px;left:16px}
+      .toast{font-size:13px;padding:12px 16px}
+      .kpi-grid{grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px}
+      #forecast-kpis{grid-template-columns:repeat(2,1fr)!important}
+      #seasonal-kpis{grid-template-columns:repeat(2,1fr)!important}
+      #simulator-kpis{grid-template-columns:repeat(2,1fr)!important}
+      .stat-banner-numbers{gap:12px}
+      .stat-num .val{font-size:20px}
+    }
+    /* Small phones (≤480px) */
+    @media(max-width:480px){
+      .notif-item{padding:8px 10px;gap:6px;min-height:44px}
+      .notif-item .notif-title{font-size:12px;font-weight:700}
+      .notif-item .notif-body{font-size:11px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+      .notif-item .notif-read-btn{font-size:18px;min-height:40px;min-width:40px;padding:6px 10px}
+      .notif-badge{font-size:9px;min-width:16px;height:16px}
+      #page-notifications .card-header div:last-child{flex-direction:column}
+      #page-notifications .card-header div:last-child button{width:100%}
+      .content{padding:12px;padding-top:64px}
+      .kpi-card{padding:16px}
+      .kpi-icon{width:40px;height:40px;font-size:18px;margin-bottom:10px}
+      .kpi-value{font-size:20px}
+      .kpi-label{font-size:12px}
+      .kpi-grid{grid-template-columns:1fr 1fr;gap:10px}
+      .card-header{padding:14px 16px 10px}
+      .card-header h3{font-size:14px}
+      .card-body{padding:14px 16px}
+      .section-header h2{font-size:18px}
+      .section-header p{font-size:12px}
+      .stat-banner{padding:16px;border-radius:12px}
+      .stat-banner-text h2{font-size:18px}
+      .stat-banner-numbers{flex-wrap:wrap;gap:8px}
+      .stat-num .val{font-size:18px}
+      .stat-num .lbl{font-size:10px}
+      .sidebar{width:100%}
+      .sidebar-logo{padding:16px}
+      .sidebar-nav{padding:12px 8px}
+      .nav-item{padding:10px 10px;font-size:13px;border-radius:8px}
+      .nav-item .icon{font-size:16px;width:20px}
+      .topbar{padding:10px 12px}
+      .topbar-title{font-size:14px}
+      .topbar-badge{padding:3px 8px;font-size:9px}
+      .topbar-right button{padding:4px 10px!important;font-size:12px!important}
+      .menu-btn{width:38px;height:38px;font-size:18px;top:12px;left:12px}
+      .btn-primary,.btn-admin{padding:10px 18px;font-size:13px}
+      .btn-outline{padding:8px 16px;font-size:12px}
+      .form-group input,.form-group select{padding:10px 12px;font-size:14px}
+      .modal-box{padding:20px;border-radius:16px}
+      .prod-modal{padding:20px;border-radius:16px}
+      .product-grid{grid-template-columns:repeat(2,1fr);gap:10px}
+      .product-card{padding:14px}
+      .product-emoji{font-size:28px}
+      .product-name{font-size:13px}
+      .product-price{font-size:18px}
+      .data-table th{padding:8px 10px;font-size:10px}
+      .data-table td{padding:8px 10px;font-size:12px}
+      .empty{padding:24px}
+      .empty-icon{font-size:36px}
+      .two-col,.three-col{gap:12px;margin-bottom:12px}
+      .card{margin-bottom:12px;border-radius:12px}
+      #forecast-kpis{grid-template-columns:1fr 1fr!important}
+      #seasonal-kpis{grid-template-columns:1fr 1fr!important}
+      #simulator-kpis{grid-template-columns:1fr 1fr!important}
+      .week-card{padding:12px}
+      .week-card .week-theme{font-size:14px}
+      .risk-item{padding:10px 12px}
+      .admin-tab{padding:6px 12px;font-size:11px}
+      .product-edit-row{grid-template-columns:1fr;gap:6px}
+      .user-edit-row{grid-template-columns:1fr;gap:6px}
+      .charge-edit-row{grid-template-columns:1fr;gap:6px}
+      .info-box,.info-box-admin{padding:10px 12px;font-size:12px}
+      .danger-zone{padding:14px}
+      .danger-zone h4{font-size:13px}
+      .export-btn{padding:12px 16px;font-size:13px}
+      .chart-wrap{height:180px!important}
+      #notif-list{max-height:calc(100vh - 180px)!important}
+      /* Login screen responsive */
+      #login-screen > div{padding:24px 20px!important;max-width:calc(100vw - 24px)!important}
+      #login-screen > div img{width:60px!important;height:60px!important}
+      #login-screen > div h2{font-size:22px!important}
+      /* Splash screen responsive */
+      #appSplash img{width:140px!important;height:140px!important}
+      #appSplash h1{font-size:32px!important}
+      #appSplash p{font-size:13px!important}
+      .toast-container{bottom:12px;right:12px;left:12px}
+      .toast{font-size:12px;padding:10px 14px;border-radius:10px}
+      .risk-title{font-size:12px}
+      .risk-solution{font-size:11px}
+    }
+    /* Very small phones (≤360px) */
+    @media(max-width:360px){
+      .kpi-grid{grid-template-columns:1fr;gap:8px}
+      .kpi-card{padding:14px}
+      .kpi-value{font-size:18px}
+      .product-grid{grid-template-columns:1fr;gap:8px}
+      .content{padding:8px;padding-top:60px}
+      .topbar-title{font-size:13px}
+      .stat-banner-text h2{font-size:16px}
+      .modal-box{padding:16px}
+      .prod-modal{padding:16px}
+      .chart-wrap{height:160px!important}
+      #forecast-kpis{grid-template-columns:1fr!important}
+      #seasonal-kpis{grid-template-columns:1fr!important}
+      #simulator-kpis{grid-template-columns:1fr!important}
+      .admin-tab{padding:5px 10px;font-size:10px}
+      #login-screen > div{padding:16px 14px!important}
+      #login-screen > div img{width:50px!important;height:50px!important}
+      .sidebar{width:100%}
+      .nav-item{padding:8px 8px;font-size:12px}
+      .data-table th{padding:6px 8px;font-size:9px}
+      .data-table td{padding:6px 8px;font-size:11px}
+    }
+    /* Landscape mode for phones */
+    @media(max-height:500px) and (orientation:landscape){
+      .sidebar{width:220px}
+      .sidebar-logo{padding:12px 16px}
+      .sidebar-logo img{width:28px!important;height:28px!important}
+      .sidebar-logo-text h1{font-size:16px}
+      .sidebar-nav{padding:8px}
+      .nav-item{padding:6px 10px;font-size:12px;margin-bottom:1px}
+      .nav-section-label{padding:8px 8px 4px;font-size:9px}
+      .sidebar-footer{padding:8px 12px}
+      #login-screen > div{padding:16px!important;max-height:90vh;overflow-y:auto}
+      #login-screen > div img{width:48px!important;height:48px!important}
+      #appSplash img{width:100px!important;height:100px!important}
+      #appSplash h1{font-size:24px!important}
+    }
+    /* Prevent body overflow causing horizontal scroll */
+    .page{max-width:100%;overflow-x:hidden}
+    /* Better touch targets for mobile */
+    @media(hover:none) and (pointer:coarse){
+      .nav-item,.btn-primary,.btn-admin,.btn-outline,.admin-tab,.tab-btn{cursor:default}
+      .nav-item{padding:12px 12px}
+      .notif-read-btn{min-height:40px;min-width:40px}
+    }
     .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:99}
     .overlay.open{display:block}
     ::-webkit-scrollbar{width:6px}
@@ -237,7 +430,7 @@
 <body class="locked">
 <div id="login-screen" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:9999;align-items:center;justify-content:center">
   <div style="background:var(--surface);border-radius:20px;padding:40px;box-shadow:var(--shadow-lg);max-width:400px;width:90%;text-align:center">
-    <div style="font-size:48px;margin-bottom:8px">🌿</div>
+    <img src="icons/logo-biozar.png" alt="BIOZAR" style="width:80px;height:80px;object-fit:contain;margin:0 auto 12px;border-radius:16px;background:var(--green-pale);padding:8px;">
     <h2 style="color:var(--green-dark);margin:0 0 4px">BIOZAR</h2>
     <p style="color:var(--text-muted);font-size:13px;margin:0 0 24px">Console de Pilotage Bio</p>
     <div class="form-group" style="text-align:left;margin-bottom:16px">
@@ -808,7 +1001,7 @@ let state = {
   ],
   user: null,
   role: null,
-  password: 'biozar2026',
+  password: null,
   whatsappEnabled: false,
   whatsappPhone: '',
   statusLog: [
@@ -825,13 +1018,13 @@ let state = {
   currentUser: null,
   currentRole: null,
   users: [
-    { login: 'admin', name: 'Admin Direction', role: 'admin', password: 'biozar2026' },
-    { login: 'jean', name: 'Jean Admin', role: 'admin', password: 'biozar2026' },
-    { login: 'production', name: 'Chef Production', role: 'production', password: 'prod2026' },
-    { login: 'commercial', name: 'Commercial', role: 'commercial', password: 'comm2026' },
-    { login: 'pascal', name: 'Pascal Commercial', role: 'commercial', password: 'comm2026' },
-    { login: 'logistique', name: 'Logistique', role: 'logistics', password: 'logi2026' },
-    { login: 'agent', name: 'Agent', role: 'operator', password: 'agent2026' },
+    { login: 'admin', name: 'Admin Direction', role: 'admin', passwordHash: 'f2117626cb3800365e06eb9decafeabb1f6c0401afd4b08f1e888561bad2d302' },
+    { login: 'jean', name: 'Jean Admin', role: 'admin', passwordHash: 'f2117626cb3800365e06eb9decafeabb1f6c0401afd4b08f1e888561bad2d302' },
+    { login: 'production', name: 'Chef Production', role: 'production', passwordHash: '58e969fe04ca7b020ce4d21f4a4998122f8561c72f942516b6271bba0f1689ac' },
+    { login: 'commercial', name: 'Commercial', role: 'commercial', passwordHash: '792b8c73c28e1aef470d463b3cc44c814c3fc70636fe51f8c1fae8fb45bab860' },
+    { login: 'pascal', name: 'Pascal Commercial', role: 'commercial', passwordHash: '792b8c73c28e1aef470d463b3cc44c814c3fc70636fe51f8c1fae8fb45bab860' },
+    { login: 'logistique', name: 'Logistique', role: 'logistics', passwordHash: 'b4cda9b41c79304e8d40fdef0bbe6b070b3a601d19fc14110f8a7bef9d8c861c' },
+    { login: 'agent', name: 'Agent', role: 'operator', passwordHash: 'a96fc074e25bdf002b08db51688454b2d22402841c73322124f48e164906fcfa' },
   ],
   roleConfig: {
     admin:       { label: '👨\u200d💼 Admin/Direction', pages: ['dashboard','finances','production','clients','produits','marketing','reporting','risques','bmc','notifications','analytics','admin','commandes','parcelles','factures','meteo','prix-marche'] },
@@ -1019,19 +1212,22 @@ function renderNotifications() {
 function saveState() {
   try {
     const s = JSON.parse(JSON.stringify(state));
-    delete s.user; delete s.role; delete s.password; delete s.syncHistory;
+    delete s.user; delete s.role; delete s.password; delete s.passwordHashed; delete s.syncHistory;
     localStorage.setItem('biozar_state', JSON.stringify(s));
-    if (window.BIOZAR_FIREBASE?.saveStateToFirestore) {
+    if (window.BIOZAR_FIREBASE?.saveStateToFirestore && navigator.onLine) {
       const sizeKb = (JSON.stringify(s).length / 1024).toFixed(1);
       updateCloudStatus('syncing');
       window.BIOZAR_FIREBASE.saveStateToFirestore(s).then(ok => {
         updateCloudStatus('online');
+        window._lastRemoteUpdate = Date.now();
         if (state.syncHistory) {
           state.syncHistory.push({ date: new Date().toISOString().slice(0,10), time: new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}), size: sizeKb + ' KB', status: ok ? 'ok' : 'error' });
           if (state.syncHistory.length > 20) state.syncHistory = state.syncHistory.slice(-20);
           try { localStorage.setItem('biozar_sync_history', JSON.stringify(state.syncHistory)); } catch(e) {}
         }
       }).catch(() => updateCloudStatus('offline'));
+    } else if (!navigator.onLine) {
+      window._pendingSave = true;
     }
   } catch(e) {}
 }
@@ -1077,8 +1273,6 @@ async function loadState() {
     }
     applyTheme();
   } catch(e) {}
-  const stored = localStorage.getItem('biozar_password');
-  if (stored) state.password = stored;
   const seen = localStorage.getItem('biozar_seen_incidents');
   if (seen) state.seenIncidents = JSON.parse(seen);
   const sc = localStorage.getItem('biozar_scenarios');
@@ -1110,13 +1304,42 @@ function initCloudMonitor() {
   window.addEventListener('online', () => {
     updateCloudStatus('online');
     showToast('Reconnexion ! Sync en cours...');
-    saveState();
+    if (window._pendingSave) { window._pendingSave = false; saveState(); }
+    pullRemoteState();
   });
   window.addEventListener('offline', () => {
     updateCloudStatus('offline');
     showToast('Mode hors-ligne — les données seront sauvegardées localement', 'error');
   });
   if (!navigator.onLine) updateCloudStatus('offline');
+  clearInterval(window._cloudPollInterval);
+  window._cloudPollInterval = setInterval(pullRemoteState, 45000);
+  if (document.visibilityState !== 'hidden') pullRemoteState();
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') pullRemoteState();
+  });
+}
+async function pullRemoteState() {
+  if (!window.BIOZAR_FIREBASE?.loadStateFromFirestore) return;
+  if (!navigator.onLine) return;
+  try {
+    var remote = await window.BIOZAR_FIREBASE.loadStateFromFirestore();
+    if (remote && remote.state && remote.updatedAt) {
+      var lastSync = window._lastRemoteUpdate || 0;
+      var remoteTs = remote.updatedAt.getTime();
+      if (remoteTs > lastSync) {
+        var merged = mergeStateWithDefaults(remote.state, state);
+        var dirty = JSON.stringify(merged) !== JSON.stringify(state);
+        if (dirty) {
+          Object.assign(state, merged);
+          localStorage.setItem('biozar_state', JSON.stringify(merged));
+          window._lastRemoteUpdate = remoteTs;
+          if (typeof renderAll === 'function') renderAll();
+          showToast('Données synchronisées depuis le cloud');
+        }
+      }
+    }
+  } catch(e) {}
 }
 
 function updateDate() {
@@ -1192,13 +1415,65 @@ function hideLoginScreen() {
   if (el) el.style.display = 'none';
 }
 
+// ═══════════════════ LOGIN RATE LIMITING ═══════════════════
+const LOGIN_MAX_ATTEMPTS = 5;
+const LOGIN_LOCKOUT_MS = 300000; // 5 minutes
+let loginAttempts = 0;
+let loginLockedUntil = null;
+
+function isLoginLocked() {
+  if (loginLockedUntil && Date.now() < loginLockedUntil) {
+    return Math.ceil((loginLockedUntil - Date.now()) / 1000);
+  }
+  loginLockedUntil = null;
+  loginAttempts = 0;
+  return 0;
+}
+
 function doLogin() {
   var login = document.getElementById('login-user').value.trim().toLowerCase();
   var pass = document.getElementById('login-pass').value;
   var errEl = document.getElementById('login-error');
   if (!login || !pass) { errEl.textContent = 'Veuillez remplir tous les champs'; errEl.style.display = 'block'; return; }
-  var user = (state.users || []).find(function(u) { return u.login === login && u.password === pass; });
-  if (!user) { errEl.textContent = 'Login ou mot de passe incorrect'; errEl.style.display = 'block'; return; }
+  setLoginLoading(true);
+  doLoginAsync(login, pass, errEl);
+}
+function setLoginLoading(loading) {
+  var btn = document.querySelector('#login-screen .btn-primary');
+  if (btn) { btn.textContent = loading ? 'Connexion...' : 'Se connecter'; btn.disabled = loading; }
+}
+async function doLoginAsync(login, pass, errEl) {
+  var user = null;
+  if (window.BIOZAR_AUTH && window.BIOZAR_AUTH.ready) {
+    try {
+      var authResult = await window.BIOZAR_AUTH.signIn(login, pass);
+      if (authResult && authResult.user) {
+        var profile = authResult.profile;
+        if (authResult.accessToken) {
+          var serverProfile = await window.BIOZAR_AUTH.getProfile(authResult.user.id, authResult.accessToken);
+          if (serverProfile) profile = serverProfile;
+        }
+        user = {
+          login: authResult.user.email,
+          name: profile.name || authResult.user.email,
+          role: profile.role || 'operator',
+          password: pass,
+          supabaseId: authResult.user.id,
+          accessToken: authResult.accessToken
+        };
+      }
+    } catch(e) {}
+  }
+  if (!user) {
+        var passHash = await sha256(pass);
+    user = (state.users || []).find(function(u) { return u.login === login && (u.passwordHash === passHash); });
+  }
+  if (!user) {
+    errEl.textContent = 'Login ou mot de passe incorrect';
+    errEl.style.display = 'block';
+    setLoginLoading(false);
+    return;
+  }
   state.currentUser = user;
   state.currentRole = user.role;
   state.user = user.login;
@@ -1209,6 +1484,7 @@ function doLogin() {
   if (ls) ls.style.display = 'none';
   document.body.classList.remove('locked');
   document.body.className = 'role-' + user.role;
+  setLoginLoading(false);
   applyRoleAccess(user.role);
   renderAll();
   updateDate();
@@ -3603,10 +3879,22 @@ function addUser() {
   if (state.users.some(function(u) { return u.login === login; })) {
     showToast('Ce login existe d\u00e9j\u00e0', 'error'); return;
   }
-  state.users.push({ login: login, name: name, role: role, password: password });
+  var btn = document.querySelector('#add-user-form .btn-admin');
+  btn.textContent = 'Création...'; btn.disabled = true;
+  addUserAsync(login, name, role, password, btn);
+}
+async function addUserAsync(login, name, role, password, btn) {
+  if (window.BIOZAR_AUTH && window.BIOZAR_AUTH.ready) {
+    try {
+      await window.BIOZAR_AUTH.signUp(login, password, name, role);
+    } catch(e) { showToast('Erreur création compte Supabase', 'error'); }
+  }
+    var passHash = await sha256(password);
+  state.users.push({ login: login, name: name, role: role, passwordHash: passHash });
   saveState();
   renderAdminUsers();
   hideAddUserForm();
+  btn.textContent = '💾 Ajouter'; btn.disabled = false;
   showToast('Utilisateur ' + name + ' ajout\u00e9');
 }
 function renderSyncHistory() {
@@ -3650,11 +3938,17 @@ function deleteProduct(idx) { if (confirm('Supprimer ' + state.products[idx].nam
 async function changePassword() {
   const pwd = document.getElementById("new-password").value.trim();
   if (!pwd || pwd.length < 4) { showToast("Minimum 4 caractères.", "error"); return; }
+  if (!state.currentUser) { showToast("Aucun utilisateur connecté.", "error"); return; }
   const hashed = await sha256(pwd);
-  state.password = hashed;
-  try { localStorage.setItem("biozar_password", hashed); } catch(e) {}
-  saveState();
-  showToast("Mot de passe changé !");
+  // Update the current user's passwordHash in the users array
+  var userIdx = state.users.findIndex(function(u) { return u.login === state.currentUser.login; });
+  if (userIdx >= 0) {
+    state.users[userIdx].passwordHash = hashed;
+    saveState();
+    showToast("Mot de passe changé !");
+  } else {
+    showToast("Utilisateur non trouvé.", "error");
+  }
   document.getElementById("new-password").value = "";
 }
 function exportJSON() {
