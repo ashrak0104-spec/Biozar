@@ -159,9 +159,10 @@
     .modal-logo{text-align:center;margin-bottom:24px}
     .modal-error{background:var(--red-light);color:var(--red);padding:10px 14px;border-radius:8px;font-size:13px;font-weight:600;margin-bottom:14px;display:none}
     .modal-error.show{display:block}
-    .prod-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);backdrop-filter:blur(4px);z-index:600;display:none;align-items:center;justify-content:center}
-    .prod-modal-overlay.open{display:flex}
-    .prod-modal{background:var(--surface);border-radius:20px;padding:32px;width:480px;max-width:calc(100vw - 40px);box-shadow:0 20px 60px rgba(0,0,0,.3);animation:slideUp .3s ease}
+    .prod-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);backdrop-filter:blur(4px);z-index:600;display:flex;align-items:center;justify-content:center;visibility:hidden;opacity:0;transition:visibility .3s,opacity .3s}
+    .prod-modal-overlay.open{visibility:visible;opacity:1}
+    .prod-modal-overlay.open .prod-modal{transform:scale(1) translateY(0);opacity:1}
+    .prod-modal{background:var(--surface);border-radius:20px;padding:32px;width:480px;max-width:calc(100vw - 40px);box-shadow:0 20px 60px rgba(0,0,0,.3);transform:scale(0.92) translateY(20px);opacity:0;transition:transform .35s cubic-bezier(.34,1.56,.64,1),opacity .3s ease}
     .timeline{padding:4px 0}
     .tl-item{display:flex;gap:16px;margin-bottom:20px}
     .tl-dot{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
@@ -460,8 +461,8 @@
 
 
 <!-- PRODUCT EDIT MODAL -->
-<div class="prod-modal-overlay" id="prodModal">
-  <div class="prod-modal">
+<div class="prod-modal-overlay" id="prodModal" onclick="closeProdModal()">
+  <div class="prod-modal" onclick="event.stopPropagation()">
     <h3 style="font-size:18px;font-weight:800;color:var(--purple);margin-bottom:20px">✏️ Modifier le Produit</h3>
     <input type="hidden" id="pm-idx" />
     <div class="form-row">
@@ -481,8 +482,8 @@
 </div>
 
 <!-- CLIENT EDIT MODAL -->
-<div class="prod-modal-overlay" id="clientModal">
-  <div class="prod-modal">
+<div class="prod-modal-overlay" id="clientModal" onclick="closeClientModal()">
+  <div class="prod-modal" onclick="event.stopPropagation()">
     <h3 style="font-size:18px;font-weight:800;color:var(--purple);margin-bottom:20px">✏️ Modifier le Contact</h3>
     <input type="hidden" id="cm-idx" />
     <div class="form-row">
@@ -522,6 +523,78 @@
     <div style="display:flex;gap:10px">
       <button class="btn-primary" onclick="doExportWithSelection()" style="flex:1">🚀 Exporter</button>
       <button class="btn-outline" onclick="closeExportOptions()" style="flex:0">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<!-- PARCELLE EDIT MODAL -->
+<div class="prod-modal-overlay" id="parcelleModal" onclick="closeParcelleModal()">
+  <div class="prod-modal" onclick="event.stopPropagation()">
+    <h3 style="font-size:18px;font-weight:800;color:var(--green-mid);margin-bottom:20px">\U0001f5fa\ufe0f Parcelle</h3>
+    <input type="hidden" id="pcm-id" value="" />
+    <div class="form-row">
+      <div class="form-group"><label>Nom de la parcelle</label><input type="text" id="pcm-name" placeholder="Parcelle Est" /></div>
+      <div class="form-group"><label>Produit principal</label><input type="text" id="pcm-product" placeholder="Tomate Grade A" /></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Surface (m\u00b2)</label><input type="number" id="pcm-surface" placeholder="2000" min="1" /></div>
+      <div class="form-group"><label>Statut</label>
+        <select id="pcm-status">
+          <option value="Sem\u00e9e">\U0001f4a7 Sem\u00e9e</option>
+          <option value="En production" selected>\U0001f331 En production</option>
+          <option value="R\u00e9colt\u00e9">\u2705 R\u00e9colt\u00e9</option>
+          <option value="En attente">\u23f3 En attente</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Rendement objectif (kg)</label><input type="number" id="pcm-rendobj" placeholder="4000" min="0" /></div>
+      <div class="form-group"><label>Rendement r\u00e9el (kg)</label><input type="number" id="pcm-rendreel" placeholder="3800" min="0" /></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Date de semis</label><input type="date" id="pcm-semis" /></div>
+      <div class="form-group"><label>Date de r\u00e9colte</label><input type="date" id="pcm-recolte" /></div>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn-admin" onclick="saveParcelleFromModal()">\U0001f4be Enregistrer</button>
+      <button class="btn-outline" onclick="closeParcelleModal()">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<!-- PRIX MARCH\u00c9 ADD MODAL -->
+<div class="prod-modal-overlay" id="prixMarcheModal" onclick="closeMarchePrixModal()">
+  <div class="prod-modal" onclick="event.stopPropagation()">
+    <h3 style="font-size:18px;font-weight:800;color:var(--blue);margin-bottom:20px">\U0001f504 Ajouter un Prix</h3>
+    <div class="form-group" style="margin-bottom:14px">
+      <label>Produit</label>
+      <input type="text" id="pmm-produit" placeholder="Tomate Grade A" />
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Prix \u00e0 Diego (Ar/kg)</label><input type="number" id="pmm-diego" placeholder="5000" min="0" /></div>
+      <div class="form-group"><label>Prix \u00e0 Nosy Be (Ar/kg)</label><input type="number" id="pmm-nosybe" placeholder="5500" min="0" /></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Prix \u00e0 Mahajanga (Ar/kg)</label><input type="number" id="pmm-mahajanga" placeholder="4800" min="0" /></div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:4px">
+      <button class="btn-admin" onclick="saveMarchePrixFromModal()">\U0001f4be Enregistrer</button>
+      <button class="btn-outline" onclick="closeMarchePrixModal()">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<!-- SCENARIO ADD MODAL -->
+<div class="prod-modal-overlay" id="scenarioModal" onclick="closeScenarioModal()">
+  <div class="prod-modal" onclick="event.stopPropagation()">
+    <h3 style="font-size:18px;font-weight:800;color:var(--gold);margin-bottom:20px">\U0001f4ca Nouveau Sc\u00e9nario</h3>
+    <div class="form-group" style="margin-bottom:20px">
+      <label>Nom du sc\u00e9nario</label>
+      <input type="text" id="sc-name" placeholder="Sc\u00e9nario 1" />
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn-admin" onclick="saveScenarioFromModal()">\U0001f4be Enregistrer</button>
+      <button class="btn-outline" onclick="closeScenarioModal()">Annuler</button>
     </div>
   </div>
 </div>
@@ -821,7 +894,10 @@
     <div class="page" id="page-parcelles">
       <div class="section-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
         <div><h2>🗺️ Parcelles & Rendements</h2><p>Suivi des parcelles de production</p></div>
-        <button class="btn-primary" onclick="showAddParcelleModal()" style="padding:10px 18px;font-size:13px">+ Parcelle</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn-primary" onclick="showAddParcelleModal()" style="padding:10px 18px;font-size:13px">+ Parcelle</button>
+          <button class="btn-admin" onclick="exportParcellesCSV()" style="padding:10px 18px;font-size:13px">📥 CSV</button>
+        </div>
       </div>
       <div class="kpi-grid" id="parcelles-kpis"></div>
       <div class="product-grid" id="parcelles-grid"></div>
@@ -1641,29 +1717,144 @@ function renderParcelles() {
       '<div style="display:flex;justify-content:space-between;margin-top:6px;font-size:11px">' +
         '<span style="color:' + color + ';font-weight:600">' + pct + '%</span>' +
         '<span style="color:var(--text-muted)">' + p.status + '</span>' +
+      '</div>' +
+      '<div style="display:flex;gap:6px;margin-top:10px">' +
+        '<button class="btn-edit" onclick="editParcelle(' + p.id + ')" style="flex:1;padding:6px;font-size:11px">\u270f\ufe0f Modifier</button>' +
+        '<button class="btn-danger" onclick="deleteParcelle(' + p.id + ')" style="flex:1;padding:6px;font-size:11px">\U0001f5d1\ufe0f</button>' +
       '</div></div>';
   }).join('');
 }
 
-function showAddParcelleModal() {
-  var name = prompt('Nom de la parcelle:');
-  if (!name) return;
-  var surface = parseInt(prompt('Surface (m²):'));
-  var product = prompt('Produit principal:');
-  if (!name || !surface || !product) return;
-  state.parcelles.push({
-    id: Date.now(), name: name, surface: surface, product: product,
-    semis: new Date().toISOString().slice(0,10), recolte: '',
-    rendementObj: Math.round(surface * 2), rendementReel: 0, status: 'Semée'
-  });
+function deleteParcelle(id) {
+  if (!confirm('Supprimer cette parcelle ?')) return;
+  state.parcelles = (state.parcelles || []).filter(function(p) { return p.id !== id; });
   saveState();
   renderParcelles();
-  showToast('Parcelle ' + name + ' créée !');
+  showToast('Parcelle supprim\u00e9e.');
 }
 
-// ═══════════════════════════════════════════════════
-// ═══════════════════ FACTURES ═══════════════════
-// ═══════════════════════════════════════════════════
+function showAddParcelleModal() {
+  document.getElementById('pcm-id').value = '';
+  document.getElementById('pcm-name').value = '';
+  document.getElementById('pcm-product').value = '';
+  document.getElementById('pcm-surface').value = '';
+  document.getElementById('pcm-status').value = 'Sem\u00e9e';
+  document.getElementById('pcm-rendobj').value = '';
+  document.getElementById('pcm-rendreel').value = '0';
+  document.getElementById('pcm-semis').value = new Date().toISOString().slice(0,10);
+  document.getElementById('pcm-recolte').value = '';
+  document.getElementById('parcelleModal').classList.add('open');
+  document.body.classList.add('locked');
+}
+
+function editParcelle(id) {
+  var parcelles = state.parcelles || [];
+  var idx = parcelles.findIndex(function(p) { return p.id === id; });
+  if (idx < 0) return;
+  var p = parcelles[idx];
+  document.getElementById('pcm-id').value = id;
+  document.getElementById('pcm-name').value = p.name;
+  document.getElementById('pcm-product').value = p.product || '';
+  document.getElementById('pcm-surface').value = p.surface || '';
+  document.getElementById('pcm-status').value = p.status || 'Sem\u00e9e';
+  document.getElementById('pcm-rendobj').value = p.rendementObj || '';
+  document.getElementById('pcm-rendreel').value = p.rendementReel || 0;
+  document.getElementById('pcm-semis').value = p.semis || '';
+  document.getElementById('pcm-recolte').value = p.recolte || '';
+  document.getElementById('parcelleModal').classList.add('open');
+  document.body.classList.add('locked');
+}
+
+function saveParcelleFromModal() {
+  var id = document.getElementById('pcm-id').value;
+  var name = document.getElementById('pcm-name').value.trim();
+  var product = document.getElementById('pcm-product').value.trim();
+  var surface = parseInt(document.getElementById('pcm-surface').value);
+  var status = document.getElementById('pcm-status').value;
+  var rendementObj = parseInt(document.getElementById('pcm-rendobj').value) || 0;
+  var rendementReel = parseInt(document.getElementById('pcm-rendreel').value) || 0;
+  var semis = document.getElementById('pcm-semis').value;
+  var recolte = document.getElementById('pcm-recolte').value;
+  if (!name || !product || !surface) {
+    showToast('Veuillez remplir le nom, le produit et la surface.', 'error');
+    return;
+  }
+  if (id) {
+    id = parseInt(id);
+    var parcelles = state.parcelles || [];
+    var idx = parcelles.findIndex(function(p) { return p.id === id; });
+    if (idx >= 0) {
+      parcelles[idx] = { id: id, name: name, product: product, surface: surface,
+        semis: semis, recolte: recolte, rendementObj: rendementObj,
+        rendementReel: rendementReel, status: status };
+      saveState();
+      renderParcelles();
+      closeParcelleModal();
+      showToast("Parcelle \"" + name + "\" modifi\u00e9e !");
+    }
+  } else {
+    state.parcelles.push({ id: Date.now(), name: name, product: product,
+      surface: surface, semis: semis || new Date().toISOString().slice(0,10),
+      recolte: recolte, rendementObj: rendementObj, rendementReel: rendementReel,
+      status: status });
+    saveState();
+    renderParcelles();
+    closeParcelleModal();
+    showToast("Parcelle \"" + name + "\" cr\u00e9\u00e9e !");
+  }
+}
+
+function closeParcelleModal() {
+  document.getElementById('parcelleModal').classList.remove('open');
+  document.body.classList.remove('locked');
+}
+
+function exportParcellesCSV() {
+  trackFeatureClick('exportCSV-parcelles');
+  var parcelles = state.parcelles || [];
+  if (parcelles.length === 0) {
+    showToast('Aucune parcelle \u00e0 exporter.', 'error');
+    return;
+  }
+  var lines = [];
+  lines.push('Nom;Produit;Surface (m\u00b2);Statut;Rendement Objectif (kg);Rendement R\u00e9el (kg);% R\u00e9alisation;Date Semis;Date R\u00e9colte');
+  parcelles.forEach(function(p) {
+    var pct = p.rendementObj > 0 ? Math.round(p.rendementReel / p.rendementObj * 100) : 0;
+    lines.push(
+      (p.name || '') + ';' +
+      (p.product || '') + ';' +
+      (p.surface || 0) + ';' +
+      (p.status || '') + ';' +
+      (p.rendementObj || 0) + ';' +
+      (p.rendementReel || 0) + ';' +
+      pct + '%' + ';' +
+      (p.semis || '') + ';' +
+      (p.recolte || '')
+    );
+  });
+  lines.push('');
+  lines.push('Nombre de parcelles;' + parcelles.length);
+  var totalSurf = parcelles.reduce(function(a,p) { return a + (p.surface || 0); }, 0);
+  var totalObj = parcelles.reduce(function(a,p) { return a + (p.rendementObj || 0); }, 0);
+  var totalReel = parcelles.reduce(function(a,p) { return a + (p.rendementReel || 0); }, 0);
+  lines.push('Surface totale (m\u00b2);' + totalSurf);
+  lines.push('Rendement objectif total (kg);' + totalObj);
+  lines.push('Rendement r\u00e9el total (kg);' + totalReel);
+  if (totalObj > 0) lines.push('Rendement global;' + Math.round(totalReel / totalObj * 100) + '%');
+  var csv = '\ufeff' + lines.join('\n');
+  var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'BIOZAR_Parcelles_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('CSV des parcelles export\u00e9 !');
+}
+
+// ═══════════════════════════════════════════════════
+// ═══════════════════ FACTURES ═══════════════════
+// ═══════════════════════════════════════════════════
 
 function populateFactureSelects() {
   var clientSel = document.getElementById('fact-client');
@@ -1933,17 +2124,35 @@ function renderMarchePrix() {
 }
 
 function addMarchePrix() {
-  var produit = prompt('Nom du produit:');
-  if (!produit) return;
-  var diego = parseInt(prompt('Prix à Diego (Ar/kg):')) || 0;
-  var nosybe = parseInt(prompt('Prix à Nosy Be (Ar/kg):')) || 0;
-  var mahajanga = parseInt(prompt('Prix à Mahajanga (Ar/kg):')) || 0;
+  showAddMarchePrixModal();
+}
+
+function showAddMarchePrixModal() {
+  document.getElementById('pmm-produit').value = '';
+  document.getElementById('pmm-diego').value = '';
+  document.getElementById('pmm-nosybe').value = '';
+  document.getElementById('pmm-mahajanga').value = '';
+  document.getElementById('prixMarcheModal').classList.add('open');
+  document.body.classList.add('locked');
+}
+
+function closeMarchePrixModal() {
+  document.getElementById('prixMarcheModal').classList.remove('open');
+  document.body.classList.remove('locked');
+}
+
+function saveMarchePrixFromModal() {
+  var produit = document.getElementById('pmm-produit').value.trim();
+  if (!produit) { showToast('Veuillez entrer le nom du produit.', 'error'); return; }
+  var diego = parseInt(document.getElementById('pmm-diego').value) || 0;
+  var nosybe = parseInt(document.getElementById('pmm-nosybe').value) || 0;
+  var mahajanga = parseInt(document.getElementById('pmm-mahajanga').value) || 0;
   state.marchePrix.push({ produit: produit, diego: diego, nosybe: nosybe, mahajanga: mahajanga, date: new Date().toISOString().slice(0,10) });
   saveState();
   renderMarchePrix();
-  showToast('Prix ajouté pour ' + produit);
+  closeMarchePrixModal();
+  showToast('Prix ajout\u00e9 pour ' + produit);
 }
-
 
 function trackPageView(page) {
   if (!state.appUsage || !state.appUsage.trackingEnabled) return;
@@ -2898,6 +3107,8 @@ function saveProduct() {
 }
 
 function closeProdModal() { document.getElementById('prodModal').classList.remove('open'); }
+
+function closeClientModal() { document.getElementById('clientModal').classList.remove('open'); }
 function addNewProduct() { document.getElementById('pm-idx').value = -1; document.getElementById('pm-emoji').value = ''; document.getElementById('pm-name').value = ''; document.getElementById('pm-price').value = ''; document.getElementById('pm-cost').value = ''; document.getElementById('pm-target').value = ''; document.getElementById('prodModal').classList.add('open'); }
 
 // ═══════════════════ FINANCES ═══════════════════
@@ -3351,15 +3562,31 @@ function saveScenarios() {
 }
 
 function addScenario() {
-  const name = prompt('Nom du scénario :', 'Scénario ' + (state.scenarios.length + 1));
-  if (!name) return;
+  showAddScenarioModal();
+}
+
+function showAddScenarioModal() {
+  document.getElementById('sc-name').value = 'Sc\u00e9nario ' + (state.scenarios.length + 1);
+  document.getElementById('scenarioModal').classList.add('open');
+  document.body.classList.add('locked');
+}
+
+function closeScenarioModal() {
+  document.getElementById('scenarioModal').classList.remove('open');
+  document.body.classList.remove('locked');
+}
+
+function saveScenarioFromModal() {
+  const name = document.getElementById('sc-name').value.trim();
+  if (!name) { showToast('Veuillez entrer un nom.', 'error'); return; }
   const multiplier = parseFloat(document.getElementById('sim-multiplier').value);
   const extraKg = parseFloat(document.getElementById('sim-extra-kg').value);
   const weeks = parseInt(document.getElementById('sim-weeks').value);
   state.scenarios.push({ name, multiplier, extraKg, weeks, added: new Date().toISOString().slice(0, 10) });
   saveScenarios();
   renderScenarioList();
-  showToast('Scénario "' + name + '" ajouté !');
+  closeScenarioModal();
+  showToast('Sc\u00e9nario "' + name + '" ajout\u00e9 !');
 }
 
 function removeScenario(idx) {

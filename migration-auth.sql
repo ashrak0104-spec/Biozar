@@ -83,3 +83,35 @@ BEGIN
   RETURN v_user_id;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ════════════════════════════════════════════════════════════════
+-- 6. RLS sur biozar_state (table principale de l'état applicatif)
+-- ════════════════════════════════════════════════════════════════
+-- Note : L'application utilise la clé anon (service key) pour lire/écrire
+-- l'état global. Ces politiques permettent le fonctionnement actuel tout
+-- en activant RLS. À terme, migrer vers auth.uid() quand Supabase Auth
+-- sera intégré dans l'app.
+
+ALTER TABLE public.biozar_state ENABLE ROW LEVEL SECURITY;
+
+-- Politique : tout le monde peut lire l'état (nécessaire pour le load initial)
+CREATE POLICY "Allow read biozar_state"
+  ON public.biozar_state FOR SELECT
+  USING (true);
+
+-- Politique : tout le monde peut insérer/mettre à jour (l'app sauvegarde
+-- l'état complet via la clé anon). La PK id='appState' évite les doublons.
+CREATE POLICY "Allow insert biozar_state"
+  ON public.biozar_state FOR INSERT
+  WITH CHECK (true);
+
+CREATE POLICY "Allow update biozar_state"
+  ON public.biozar_state FOR UPDATE
+  USING (true)
+  WITH CHECK (true);
+
+-- Politique : tout le monde peut supprimer (utilisé pour les backups
+-- et la réinitialisation des données)
+CREATE POLICY "Allow delete biozar_state"
+  ON public.biozar_state FOR DELETE
+  USING (true);
