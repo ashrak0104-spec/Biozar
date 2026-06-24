@@ -92,6 +92,13 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- en activant RLS. À terme, migrer vers auth.uid() quand Supabase Auth
 -- sera intégré dans l'app.
 
+-- Création de la table si elle n'existe pas déjà (script autonome)
+CREATE TABLE IF NOT EXISTS public.biozar_state (
+  id TEXT PRIMARY KEY DEFAULT 'appState',
+  data JSONB NOT NULL DEFAULT '{}',
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 ALTER TABLE public.biozar_state ENABLE ROW LEVEL SECURITY;
 
 -- Politique : tout le monde peut lire l'état (nécessaire pour le load initial)

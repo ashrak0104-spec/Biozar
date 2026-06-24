@@ -87,6 +87,56 @@ const supabaseConfig = {
 
 ---
 
+## 🚀 Auto-Push : Push automatique Git
+
+Deux méthodes sont disponibles pour pusher automatiquement vers GitHub dès qu'il y a des changements :
+
+### Méthode 1 (recommandée) — Post-commit hook
+Un hook Git a été installé dans `.git/hooks/post-commit`. Il déclenche un `git push` automatiquement **après chaque commit**. Aucun programme à garder ouvert.
+
+**Fonctionnement :**
+1. Vous faites `git add` + `git commit` normalement
+2. Le hook pousse automatiquement vers `origin/<branche>`
+3. Si le push échoue (pas de réseau), le commit est conservé
+
+**Test :**
+```bash
+git commit --allow-empty -m "test auto-push"
+# Vous devriez voir : [push] [post-commit] Push automatique vers origin/master...
+#                  [OK] [post-commit] Push reussi vers origin/master
+```
+
+### Méthode 2 — Watcher automatique (auto-push.ps1)
+Un script PowerShell `auto-push.ps1` surveille les dossiers `biozar/web/`, `biozar-app/www/` et `.github/workflows/`. Dès qu'un changement est détecté, il commit et push automatiquement.
+
+**Lancement :**
+- Exécutez `AUTO_PUSH_START.bat` (crée à la racine)
+- Choisissez l'option 2 pour le watcher
+- Laissez la fenêtre ouverte (Ctrl+C pour arrêter)
+
+**Intervalle :** 30 secondes par défaut (modifiable dans `auto-push.ps1`)
+
+---
+
+## 🔒 Row Level Security (RLS)
+
+Le script `migration-auth.sql` contient les politiques RLS pour les deux tables :
+
+### Table `profiles`
+- RLS activé avec politiques par rôle :
+  - `Users can view own profile` — lecture de son propre profil
+  - `Admins can view all profiles` — admin lit tout
+  - `Admins can update all profiles` — admin modifie tout
+
+### Table `biozar_state` (section 6)
+- RLS activé avec politiques permissives (l'app utilise la clé anon)
+- `Allow read/insert/update/delete biozar_state` — accès complet via clé anon
+- **À terme :** migrer vers `auth.uid()` quand Supabase Auth sera intégré
+
+**Pour activer :** Exécutez `migration-auth.sql` dans Supabase → SQL Editor
+
+---
+
 ## 💰 Résumé des coûts
 
 | Poste | Avant (Firebase Blaze) | Après (Migration) |
