@@ -15,7 +15,7 @@ npm run gen:server-sql  # régénère la migration PostgreSQL/Supabase
 npm run copy-web        # biozar/web → biozar-app/www
 ```
 
-**État vérifié :** `135 pass / 0 fail`, `27 contrôles réussis`, codes de sortie 0.
+**État vérifié :** `144 pass / 0 fail`, `28 contrôles réussis`, codes de sortie 0.
 
 ---
 
@@ -255,6 +255,48 @@ module → création de connexion → `Db.open()` → écriture → relecture �
 `@capacitor-community/sqlite` a été ajouté aux dépendances de
 `biozar-app` : sans lui, Capacitor n'auto-lie pas le code natif dans l'APK
 et `window.Capacitor.Plugins.CapacitorSQLite` n'existe pas.
+
+### Un troisième défaut : les colonnes `NOT NULL DEFAULT`
+
+`Db.upsert()` et `applyOps()` listaient **toutes** les colonnes du schéma et
+liaient `null` à celles que l'appelant ne fournissait pas. Or SQLite n'applique
+un `DEFAULT` que si la colonne est **omise** de l'`INSERT` ; un `NULL` explicite
+sur une colonne `NOT NULL DEFAULT 0` est refusé.
+
+Vérifié : `INSERT … VALUES (…, NULL)` sur une telle colonne lève
+`NOT NULL constraint failed`, alors que la même insertion sans la colonne
+applique bien le défaut.
+
+**16 colonnes de 9 entités** étaient concernées :
+
+| Entité | Colonnes |
+|---|---|
+| productions | qty, value |
+| products | price, cost |
+| parcelles | surface, rendement_obj, rendement_reel |
+| commandes | qty, total |
+| factures | lines, total |
+| incidents | resolved |
+| checklist | done |
+| tresorerie | entree, sortie |
+| notifications | read |
+
+Concrètement : enregistrer une parcelle sans renseigner sa surface, ou une
+production sans quantité, échouait en base locale.
+
+Corrigé en n'écrivant que les colonnes réellement fournies. Effet de bord
+utile : un upsert partiel n'écrase plus les colonnes non mentionnées, ni à
+l'insertion ni en cas de conflit.
+
+Une limite demeure, et elle vient de SQLite : les colonnes `NOT NULL` **sans**
+défaut (`productions.date`, `clients.nom`, `parcelles.name`…) doivent toujours
+être fournies, y compris lors d'une mise à jour — SQLite valide la ligne
+`INSERT` avant de basculer sur le `DO UPDATE`. Le test vérifie que l'erreur
+nomme alors la colonne manquante.
+
+Cinq tests de non-régression couvrent ce point, dont les champs obligatoires
+sont **dérivés du schéma** et non écrits à la main : le test reste juste si une
+colonne est ajoutée.
 
 ## 8. Durcissement de l'authentification (fait)
 

@@ -181,13 +181,19 @@ async function applyOps(db, ops) {
         deletes += 1;
       } else {
         const spec = ENTITY_SPECS[op.entity];
-        const cols = ['id', 'device_id', 'updated_at', 'dirty', ...spec.columns.map(([c]) => c)];
+
+        // Mêmes raisons que dans Db.upsert : une colonne absente doit être
+        // omise, pas liée à NULL, sinon les 16 colonnes `NOT NULL DEFAULT 0`
+        // du schéma font échouer l'insertion.
+        const provided = spec.columns.filter(([c]) => op.fields[c] !== undefined);
+
+        const cols = ['id', 'device_id', 'updated_at', 'dirty', ...provided.map(([c]) => c)];
         const vals = [
           op.id,
           db.deviceId,
           Date.now(),
           1,
-          ...spec.columns.map(([c]) => op.fields[c] ?? null)
+          ...provided.map(([c]) => op.fields[c])
         ];
         const assignments = cols.filter((c) => c !== 'id').map((c) => `${c} = excluded.${c}`).join(', ');
 

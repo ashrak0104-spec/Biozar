@@ -496,3 +496,114 @@ describe('parcours complet semi-offline', () => {
     await db.close();
   });
 });
+
+describe('upsert partiel et colonnes NOT NULL DEFAULT', () => {
+  // Un upsert qui omettait une colonne `NOT NULL DEFAULT 0` levait
+  // « NOT NULL constraint failed » : le code listait toutes les colonnes et
+  // liait NULL aux absentes, or SQLite n'applique un DEFAULT que si la
+  // colonne est omise. 16 colonnes de 9 entités étaient concernées.
+  //
+  // Les champs obligatoires sont dérivés du schéma plutôt qu'écrits à la
+  // main : le test reste juste si une colonne est ajoutée.
+
+  const one = (db, entity, id) => db.get(`SELECT * FROM ${entity} WHERE id = ?`, [id]);
+
+  /** Champs NOT NULL sans DEFAULT : impossibles à omettre, avec ou sans conflit. */
+  function requiredFields(entity) {
+    const spec = ENTITY_SPECS[entity];
+    const out = {};
+    for (const [col, def] of spec.columns) {
+      if (/NOT NULL/.test(def) && !/DEFAULT/.test(def)) out[col] = `valeur-${col}`;
+    }
+    return out;
+  }
+
+  test('Db.upsert applique les DEFAULT aux colonnes omises', async () => {
+    const db = await Db.open(new NodeAdapter(':memory:'));
+
+    // parcelles : surface, rendement_obj et rendement_reel sont NOT NULL DEFAULT 0.
+    const id = await db.upsert('parcelles', { ...requiredFields('parcelles'), status: 'Semé' });
+
+    const row = await one(db, 'parcelles', id);
+    assert.equal(Number(row.surface), 0, 'le DEFAULT doit s’appliquer');
+    assert.equal(Number(row.rendement_obj), 0);
+    assert.equal(Number(row.rendement_reel), 0);
+
+    await db.close();
+  });
+
+  test('Db.upsert sur les 9 entités à DEFAULT ne lève aucune contrainte', async () => {
+    const db = await Db.open(new NodeAdapter(':memory:'));
+
+    const withDefaults = Object.entries(ENTITY_SPECS).filter(([, spec]) =>
+      spec.columns.some(([, def]) => /NOT NULL/.test(def) && /DEFAULT/.test(def))
+    );
+    assert.equal(withDefaults.length, 9, '9 entités portent des colonnes NOT NULL DEFAULT');
+
+    for (const [entity] of withDefaults) {
+      // On ne fournit QUE les champs obligatoires : tout le reste doit
+      // retomber sur son DEFAULT sans lever de contrainte.
+      const id = await db.upsert(entity, requiredFields(entity));
+      const row = await one(db, entity, id);
+      assert.ok(row, `${entity} : la ligne doit exister`);
+    }
+
+    await db.close();
+  });
+
+  test('un upsert partiel n’écrase pas les colonnes non mentionnées', async () => {
+    const db = await Db.open(new NodeAdapter(':memory:'));
+
+    const id = await db.upsert('parcelles', {
+      ...requiredFields('parcelles'),
+      surface: 25,
+      rendement_obj: 40
+    });
+    // Second appel : les champs obligatoires restent exigés par SQLite même
+    // sur conflit, mais les colonnes à DEFAULT ne sont pas touchées.
+    await db.upsert('parcelles', { ...requiredFields('parcelles'), status: 'Récolté' }, { id });
+
+    const row = await one(db, 'parcelles', id);
+    assert.equal(Number(row.surface), 25, 'surface ne doit pas être remise à 0');
+    assert.equal(Number(row.rendement_obj), 40, 'rendement_obj doit être préservé');
+    assert.equal(row.status, 'Récolté', 'le champ fourni doit être mis à jour');
+
+    await db.close();
+  });
+
+  test('applyOps applique aussi les DEFAULT (chemin de production)', async () => {
+    const db = await Db.open(new NodeAdapter(':memory:'));
+
+    // applyOps est le chemin réel de la double écriture depuis l'état legacy.
+    const { applyOps } = await import('../biozar/web/core/bridge.js');
+    const res = await applyOps(db, [
+      {
+        entity: 'parcelles',
+        id: 'p-1',
+        op: 'upsert',
+        fields: { ...requiredFields('parcelles') }
+      }
+    ]);
+
+    assert.equal(res.upserts, 1);
+    const row = await one(db, 'parcelles', 'p-1');
+    assert.equal(Number(row.surface), 0);
+    assert.equal(Number(row.rendement_reel), 0);
+
+    await db.close();
+  });
+
+  test('omettre un champ NOT NULL sans DEFAULT reste une erreur explicite', async () => {
+    const db = await Db.open(new NodeAdapter(':memory:'));
+
+    // Ce n'est pas une régression à masquer : SQLite refuse la ligne, et le
+    // message doit nommer la colonne plutôt que de remonter opaque.
+    await assert.rejects(
+      () => db.upsert('parcelles', { status: 'Semé' }),
+      /NOT NULL constraint failed: parcelles\.name/,
+      'le nom de la colonne manquante doit apparaître'
+    );
+
+    await db.close();
+  });
+});

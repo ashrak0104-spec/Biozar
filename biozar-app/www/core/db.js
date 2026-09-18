@@ -331,13 +331,24 @@ class Db {
     const now = Date.now();
 
     return this.transaction(async (tx) => {
-      const columns = ['id', 'device_id', 'updated_at', 'dirty', ...spec.columns.map(([c]) => c)];
+      // Seules les colonnes réellement fournies sont écrites.
+      //
+      // Lister toutes les colonnes et lier `null` aux absentes fait échouer
+      // l'insertion : SQLite n'applique un DEFAULT que si la colonne est
+      // omise, et refuse un NULL explicite sur `NOT NULL DEFAULT 0`. 16
+      // colonnes de 9 entités sont dans ce cas (qty, value, surface, total…).
+      //
+      // Effet de bord utile : un upsert partiel n'écrase plus les colonnes
+      // non mentionnées, ni à l'insertion ni en cas de conflit.
+      const provided = spec.columns.filter(([c]) => fields[c] !== undefined);
+
+      const columns = ['id', 'device_id', 'updated_at', 'dirty', ...provided.map(([c]) => c)];
       const values = [
         rowId,
         this.deviceId,
         now,
         markDirty ? 1 : 0,
-        ...spec.columns.map(([c]) => normalize(fields[c]))
+        ...provided.map(([c]) => normalize(fields[c]))
       ];
 
       const assignments = columns

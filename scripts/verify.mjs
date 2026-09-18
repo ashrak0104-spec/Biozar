@@ -563,6 +563,26 @@ check('aucun bare specifier dans le socle (WebView sans bundler)', () => {
   return '11 modules sans bare specifier, SQLite vendorisé et déclaré';
 });
 
+check('chaque entrée du précache existe dans le paquet', () => {
+  // Une entrée qui 404 fait échouer l'installation du Service Worker, donc le
+  // premier lancement hors-ligne. Ce contrôle croise la liste déclarée avec
+  // le contenu réel de la copie Capacitor.
+  const sw = fs.readFileSync(path.join(WEB, 'sw.js'), 'utf8');
+  const entries = [...sw.matchAll(/^\s*'([^']+)',\s*$/gm)]
+    .map((m) => m[1])
+    .filter((e) => !e.startsWith('http') && !e.startsWith('/'));
+
+  assert(entries.length > 0, 'aucune entrée de précache trouvée');
+
+  const www = path.join(ROOT, 'biozar-app', 'www');
+  assert(fs.existsSync(www), 'biozar-app/www absent : lancer npm run copy-web');
+
+  const missing = entries.filter((e) => !fs.existsSync(path.join(www, e)));
+  assert(missing.length === 0, `entrées absentes du paquet : ${missing.join(', ')}`);
+
+  return `${entries.length} entrées, toutes présentes dans www/`;
+});
+
 // ── 7. Aucun secret versionné ──
 check('aucun secret ni binaire de build versionné', () => {
   const tracked = execSync('git ls-files', { cwd: ROOT, encoding: 'utf8' }).split('\n');

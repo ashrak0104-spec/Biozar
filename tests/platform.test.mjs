@@ -15,7 +15,12 @@ import { test, describe, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 
-import { createAdapter, tauriDatabaseClass, Db } from '../biozar/web/core/index.js';
+import {
+  createAdapter,
+  detectPlatform,
+  tauriDatabaseClass,
+  Db
+} from '../biozar/web/core/index.js';
 import { CapacitorAdapter, TauriAdapter } from '../biozar/web/core/db.js';
 
 // ── Faux greffon Capacitor SQLite, adossé à un vrai SQLite ──────
@@ -213,6 +218,80 @@ describe('Windows : adaptateur Tauri via window.__TAURI__', () => {
     assert.equal(await db.countPending(), 1);
 
     await db.close();
+  });
+});
+
+describe('chaîne complète : détection de plateforme → adaptateur', () => {
+  // C'est le chaînon qui n'avait jamais été couvert : les adaptateurs étaient
+  // testés avec des handles construits à la main, sans passer par la
+  // détection ni par createAdapter(). C'est précisément là que le défaut de
+  // bare specifier se cachait.
+  test('un pont Tauri est détecté puis mène à un Db fonctionnel', async () => {
+    const bridge = fakeTauriBridge();
+    // Le vrai pont expose les deux ; detectPlatform regarde l'un ou l'autre.
+    globalThis.window = {
+      __TAURI_INTERNALS__: {},
+      __TAURI__: { core: { invoke: bridge.invoke } }
+    };
+
+    assert.equal(detectPlatform(globalThis.window), 'tauri');
+
+    const adapter = await createAdapter(detectPlatform(globalThis.window));
+    const db = await Db.open(adapter);
+    // Colonnes réelles de parcelles : name, surface, product, status…
+    await db.upsert('parcelles', { name: 'Parcelle A', surface: 12, status: 'Semé' });
+    const rows = await db.findAll('parcelles');
+    assert.equal(rows.length, 1);
+    assert.equal(Number(rows[0].surface), 12);
+    await db.close();
+  });
+
+  test('une plateforme native Capacitor est détectée puis mène à un Db fonctionnel', async () => {
+    const plugin = fakeCapacitorPlugin();
+    globalThis.window = {
+      Capacitor: {
+        isNativePlatform: () => true,
+        Plugins: { CapacitorSQLite: plugin }
+      }
+    };
+
+    assert.equal(detectPlatform(globalThis.window), 'android');
+
+    const adapter = await createAdapter(detectPlatform(globalThis.window));
+    const db = await Db.open(adapter);
+    await db.upsert('clients', { nom: 'Épicerie Koto', statut: 'Abonné' });
+    assert.equal((await db.findAll('clients'))[0].nom, 'Épicerie Koto');
+    await db.close();
+  });
+
+  test('un navigateur sans moteur SQL donne une erreur explicite, pas un crash muet', async () => {
+    globalThis.window = {};
+
+    // Sous Node, detectPlatform renvoie 'node' : process.versions.node existe.
+    // C'est le comportement voulu — les tests tournent sur node:sqlite.
+    assert.equal(detectPlatform(globalThis.window), 'node');
+
+    // Mais si l'on demande explicitement 'browser', l'erreur doit nommer la
+    // cause plutôt que de laisser un import échouer de façon opaque.
+    await assert.rejects(
+      () => createAdapter('browser'),
+      /aucun moteur SQL disponible/,
+      'le navigateur doit expliquer ce qui manque'
+    );
+  });
+
+  test('un navigateur est reconnu comme tel hors Node', () => {
+    // En isolant le test de process.versions, on vérifie la branche navigateur.
+    const savedVersions = process.versions;
+    try {
+      Object.defineProperty(process, 'versions', { value: {}, configurable: true });
+      assert.equal(detectPlatform({}), 'browser');
+    } finally {
+      Object.defineProperty(process, 'versions', {
+        value: savedVersions,
+        configurable: true
+      });
+    }
   });
 });
 
