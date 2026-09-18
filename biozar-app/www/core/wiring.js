@@ -16,6 +16,7 @@
 
 import { bootstrap } from './index.js';
 import { createBridge } from './bridge.js';
+import { createOfflineAuth } from './offline-auth.js';
 
 /**
  * @param {object} opts
@@ -47,6 +48,27 @@ async function install(opts) {
 
   const pending = await app.db.countPending();
   log(`socle actif · plateforme ${app.platform} · ${pending} opération(s) en attente`);
+
+  // ── Authentification hors-ligne ────────────────────────────────
+  // Remplace l'ancienne table de hachages SHA-256 non salés codée en dur
+  // dans index.html. Un compte ne peut se connecter hors-ligne que s'il
+  // s'est déjà authentifié EN LIGNE sur cet appareil.
+  let offlineAuth = null;
+  const host_ = typeof window !== 'undefined' ? window : null;
+  const cryptoImpl =
+    (opts.crypto) ||
+    (host_ && host_.crypto) ||
+    (typeof globalThis !== 'undefined' ? globalThis.crypto : null);
+
+  try {
+    offlineAuth = createOfflineAuth({ db: app.db, crypto: cryptoImpl });
+    if (host_) host_.__biozarOfflineAuth = offlineAuth;
+    log('authentification hors-ligne prête (PBKDF2, enrôlement requis)');
+  } catch (e) {
+    // Sans SubtleCrypto (contexte non sécurisé), on refuse plutôt que
+    // d'offrir un repli faible : mieux vaut exiger une connexion en ligne.
+    log(`authentification hors-ligne indisponible : ${e.message}`);
+  }
 
   /**
    * Récupère le jeton de la session courante et le transmet au transport.
@@ -163,6 +185,7 @@ async function install(opts) {
     available: true,
     app,
     bridge,
+    offlineAuth,
     platform: app.platform,
     refreshAccessToken,
     isAuthorized: () => app.isAuthorized()

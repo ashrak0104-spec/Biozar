@@ -13,7 +13,7 @@
    plus aucune mise à jour. C'est corrigé.
    ═══════════════════════════════════════════════════════════════ */
 
-const CACHE_VERSION = 'biozar-v5';
+const CACHE_VERSION = 'biozar-v6';
 const CACHE_SHELL = `${CACHE_VERSION}-shell`;
 const CACHE_ASSETS = `${CACHE_VERSION}-assets`;
 
@@ -48,7 +48,8 @@ const PRECACHE_ASSETS = [
   'core/migration.js',
   'core/bridge.js',
   'core/sync-status.js',
-  'core/wiring.js'
+  'core/wiring.js',
+  'core/offline-auth.js'
 ];
 
 // ─── INSTALLATION ───────────────────────────────────────────────

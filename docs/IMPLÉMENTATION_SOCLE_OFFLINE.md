@@ -8,14 +8,14 @@
 ## 1. Commandes
 
 ```bash
-npm test                # 107 tests, ~9 s
+npm test                # 125 tests, ~10 s
 npm run verify          # 16 contrôles d'intégrité du paquet semi-offline
 npm run gen:sql         # régénère le schéma SQLite consommé par Tauri
 npm run gen:server-sql  # régénère la migration PostgreSQL/Supabase
 npm run copy-web        # biozar/web → biozar-app/www
 ```
 
-**État vérifié :** `107 pass / 0 fail`, `22 contrôles réussis`, codes de sortie 0.
+**État vérifié :** `125 pass / 0 fail`, `24 contrôles réussis`, codes de sortie 0.
 
 ---
 
@@ -101,7 +101,7 @@ nativement (`<script type="module">`). Contrainte vérifiée automatiquement : *
 relatif doit porter l'extension `.js`**, sinon l'échec n'apparaît que dans la WebView,
 sur le terrain.
 
-### Ce que les 107 tests prouvent
+### Ce que les 125 tests prouvent
 
 | Test | Code réellement exécuté |
 |---|---|
@@ -196,6 +196,73 @@ serveur. Trois tests verrouillent ce comportement.
 
 ---
 
+
+---
+
+## 7. Durcissement de l'authentification (fait)
+
+Trois failles distinctes, toutes sur le chemin hors-ligne — c'est-à-dire le
+mode **principal** de l'application.
+
+### 7.1 Identifiants embarqués dans le code livré
+
+`index.html` contenait sept comptes avec un SHA-256 **non salé** en dur. Le
+fichier est livré dans l'APK : quiconque pouvait extraire les hachages et les
+casser par table arc-en-ciel. Pire, deux paires partageaient le même hachage
+(`admin`/`jean`, `commercial`/`pascal`) — **un seul mot de passe ouvrait deux
+comptes**, dont deux administrateurs.
+
+Remplacé par `core/offline-auth.js` : PBKDF2-HMAC-SHA256, 210 000 itérations
+(recommandation OWASP 2023), sel aléatoire de 128 bits par compte, comparaison
+à temps constant, expiration à 30 jours. Aucun mot de passe ni hachage n'est
+livré dans le code.
+
+**Règle centrale :** un compte ne peut se connecter hors-ligne que s'il s'est
+déjà authentifié **en ligne** sur cet appareil. L'enrôlement est la seule porte
+d'entrée.
+
+### 7.2 Mot de passe en clair et jeton dans le blob cloud
+
+`doLoginAsync()` plaçait `password: pass` — le mot de passe **en clair** — dans
+`state.currentUser`, et `saveState()` retirait `s.password` mais pas
+`s.currentUser`. Les deux partaient donc dans `localStorage` **et** dans
+`biozar_state.data` sur Supabase.
+
+La conséquence était plus grave qu'une fuite locale : la politique
+`biozar_state_select` est `USING (auth.uid() IS NOT NULL)`, donc **tout
+utilisateur authentifié pouvait lire `appState`** et y récolter les jetons
+d'accès des autres.
+
+Désormais : le mot de passe ne quitte plus la fonction de connexion ; le jeton
+reste en `localStorage` (continuité de session) mais est retiré de la copie
+cloud.
+
+### 7.3 Un changement de mot de passe qui ne changeait rien
+
+`changePassword()` hachait en SHA-256 non salé, écrivait le résultat dans
+l'annuaire local et affichait **« Mot de passe changé ! »** sans jamais
+contacter le serveur. Le mot de passe réel restait inchangé.
+
+Il passe maintenant par GoTrue (`PUT /auth/v1/user`, nouvelle méthode
+`SupabaseAPI.updatePassword`) et ré-enrôle l'accès hors-ligne. En cas d'échec,
+l'erreur du serveur est affichée — plus de faux succès. Même correction pour
+`addUserAsync()`, qui annonçait « Utilisateur ajouté » même quand la création
+Supabase avait échoué.
+
+### Ce que cela ne garantit pas
+
+Une authentification purement côté client n'est **jamais** inviolable : ce qui
+tourne dans la WebView est inspectable, et un attaquant disposant d'un accès
+physique à l'appareil peut modifier le code. La seule autorité réelle reste le
+serveur. C'est précisément pourquoi l'enrôlement exige une connexion en ligne
+réussie et pourquoi les sessions hors-ligne expirent.
+
+### Conséquence à connaître avant déploiement
+
+**Les utilisateurs existants devront se connecter une fois en ligne** après
+cette mise à jour : leurs anciens hachages locaux ne sont plus acceptés. C'est
+le prix de la suppression des identifiants embarqués. À annoncer avant de
+déployer sur des appareils de terrain.
 
 ---
 

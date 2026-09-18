@@ -383,6 +383,63 @@ check('le chemin legacy Supabase est lui aussi authentifié', () => {
   return 'jeton repris sur les deux chemins, retiré à la déconnexion';
 });
 
+check('aucun identifiant embarqué dans le code livré', () => {
+  const html = read('index.html');
+
+  // Un hachage de mot de passe est une chaîne hexadécimale de 64 caractères.
+  // Le fichier est livré dans l'APK : tout hachage présent est extractible.
+  const hashes = html.match(/['"][a-f0-9]{64}['"]/g) || [];
+  assert(hashes.length === 0, `${hashes.length} hachage(s) de mot de passe embarqué(s)`);
+
+  assert(!/passwordHash:\s*'/.test(html), 'state.users ne doit plus porter de hachage');
+  assert(!/async function sha256\(/.test(html), 'sha256() non salé ne doit pas réapparaître');
+
+  // Le mot de passe en clair et le jeton ne doivent pas partir dans le cloud.
+  assert(
+    /delete s\.currentUser\.password;/.test(html),
+    'saveState doit retirer le mot de passe de la session'
+  );
+  assert(
+    /delete cloudState\.currentUser\.accessToken;/.test(html),
+    'le jeton ne doit jamais atteindre le blob cloud'
+  );
+
+  return 'aucun hachage embarqué, session assainie avant persistance';
+});
+
+check('authentification hors-ligne : PBKDF2 et enrôlement obligatoire', () => {
+  const src = fs.readFileSync(path.join(WEB, 'core', 'offline-auth.js'), 'utf8');
+
+  const iters = Number((src.match(/const ITERATIONS = (\d+)/) || [])[1]);
+  assert(iters >= 210000, `${iters} itérations, OWASP en recommande 210 000`);
+  assert(/PBKDF2/.test(src) && /SHA-256/.test(src), 'PBKDF2-HMAC-SHA256 attendu');
+  assert(/function safeEqual/.test(src), 'la comparaison doit être à temps constant');
+  assert(
+    /reason: 'never_enrolled'/.test(src),
+    'un compte jamais authentifié en ligne doit être refusé hors-ligne'
+  );
+  assert(
+    /SubtleCrypto indisponible/.test(src),
+    'sans crypto sûre, il faut refuser de démarrer plutôt que d’accepter n’importe quoi'
+  );
+
+  const html = read('index.html');
+  assert(
+    /window\.__biozarOfflineAuth\.verify\(login, pass\)/.test(html),
+    'le repli de connexion doit passer par offlineAuth.verify'
+  );
+  assert(
+    /window\.__biozarOfflineAuth\.enroll\(/.test(html),
+    'une connexion en ligne réussie doit enrôler l’accès hors-ligne'
+  );
+  assert(
+    /updatePassword\s*:/.test(read('supabase-init.js')),
+    'le changement de mot de passe doit passer par le serveur'
+  );
+
+  return `PBKDF2 ${iters} itérations, enrôlement requis, temps constant`;
+});
+
 // ── 7. Aucun secret versionné ──
 check('aucun secret ni binaire de build versionné', () => {
   const tracked = execSync('git ls-files', { cwd: ROOT, encoding: 'utf8' }).split('\n');

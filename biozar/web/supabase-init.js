@@ -217,6 +217,45 @@ const SupabaseAPI = {
     return res !== null && res.ok;
   },
 
+  /**
+   * Changer le mot de passe de l'utilisateur connecté (GoTrue PUT /user).
+   *
+   * Nécessite le jeton d'accès : sans lui, aucune modification n'est possible
+   * — et c'est voulu. Un changement de mot de passe ne peut pas se faire
+   * hors-ligne, faute d'autorité pour le valider.
+   *
+   * @returns {Promise<{ok:boolean, error?:string}>}
+   */
+  updatePassword: async function(newPassword, accessToken) {
+    if (!isConfigured()) return { ok: false, error: 'Supabase non configuré' };
+    if (!accessToken) return { ok: false, error: 'Session expirée : reconnectez-vous en ligne' };
+
+    let res;
+    try {
+      res = await fetch(`${supabaseConfig.url}/auth/v1/user`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: supabaseConfig.anonKey,
+          Authorization: `Bearer ${accessToken}`
+        },
+        body: JSON.stringify({ password: newPassword })
+      });
+    } catch (e) {
+      return { ok: false, error: 'Serveur injoignable' };
+    }
+
+    if (!res.ok) {
+      let detail = '';
+      try {
+        const body = await res.json();
+        detail = body.error_description || body.msg || body.message || '';
+      } catch (_) { /* corps non JSON */ }
+      return { ok: false, error: detail || `Refusé par le serveur (HTTP ${res.status})` };
+    }
+    return { ok: true };
+  },
+
   /** Sauvegarder l'état complet dans Supabase */
   saveStateToFirestore: async function(state) {
     if (!isConfigured()) return false;

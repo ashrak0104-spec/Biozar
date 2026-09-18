@@ -1099,14 +1099,22 @@ let state = {
   ],
   currentUser: null,
   currentRole: null,
+  // Annuaire de PROFILS uniquement : aucun identifiant ici.
+  //
+  // Cette liste embarquait sept hachages SHA-256 NON SALÉS, et deux paires
+  // partageaient le même hachage (admin/jean, commercial/pascal) — un seul
+  // mot de passe ouvrait donc deux comptes. Le fichier étant livré dans
+  // l'APK, quiconque pouvait extraire les hachages et les casser par table
+  // arc-en-ciel.
+  //
+  // L'autorité d'authentification est Supabase. L'accès hors-ligne passe par
+  // core/offline-auth.js (PBKDF2, enrôlement après connexion en ligne).
   users: [
-    { login: 'admin', name: 'Admin Direction', role: 'admin', passwordHash: 'f2117626cb3800365e06eb9decafeabb1f6c0401afd4b08f1e888561bad2d302' },
-    { login: 'jean', name: 'Jean Admin', role: 'admin', passwordHash: 'f2117626cb3800365e06eb9decafeabb1f6c0401afd4b08f1e888561bad2d302' },
-    { login: 'production', name: 'Chef Production', role: 'production', passwordHash: '58e969fe04ca7b020ce4d21f4a4998122f8561c72f942516b6271bba0f1689ac' },
-    { login: 'commercial', name: 'Commercial', role: 'commercial', passwordHash: '792b8c73c28e1aef470d463b3cc44c814c3fc70636fe51f8c1fae8fb45bab860' },
-    { login: 'pascal', name: 'Pascal Commercial', role: 'commercial', passwordHash: '792b8c73c28e1aef470d463b3cc44c814c3fc70636fe51f8c1fae8fb45bab860' },
-    { login: 'logistique', name: 'Logistique', role: 'logistics', passwordHash: 'b4cda9b41c79304e8d40fdef0bbe6b070b3a601d19fc14110f8a7bef9d8c861c' },
-    { login: 'agent', name: 'Agent', role: 'operator', passwordHash: 'a96fc074e25bdf002b08db51688454b2d22402841c73322124f48e164906fcfa' },
+    { login: 'admin', name: 'Admin Direction', role: 'admin' },
+    { login: 'production', name: 'Chef Production', role: 'production' },
+    { login: 'commercial', name: 'Commercial', role: 'commercial' },
+    { login: 'logistique', name: 'Logistique', role: 'logistics' },
+    { login: 'agent', name: 'Agent', role: 'operator' },
   ],
   roleConfig: {
     admin:       { label: '👨\u200d💼 Admin/Direction', pages: ['dashboard','finances','production','clients','produits','marketing','reporting','risques','bmc','notifications','analytics','admin','commandes','parcelles','factures','meteo','prix-marche'] },
@@ -1295,11 +1303,31 @@ function saveState() {
   try {
     const s = JSON.parse(JSON.stringify(state));
     delete s.user; delete s.role; delete s.password; delete s.passwordHashed; delete s.syncHistory;
+
+    // ── Assainissement de la session avant persistance ──────────────
+    // `state.currentUser` portait le mot de passe EN CLAIR et le jeton
+    // d'accès. Les deux partaient dans localStorage et dans le blob cloud.
+    //
+    // Le mot de passe n'est lu par personne : il disparaît partout.
+    // Le jeton reste en localStorage (pratique courante, nécessaire à la
+    // continuité de session) mais JAMAIS dans le blob cloud : la politique
+    // biozar_state_select laisse tout utilisateur authentifié lire appState,
+    // il y aurait donc récolté les jetons des autres.
+    let cloudState = s;
+    if (s.currentUser) {
+      delete s.currentUser.password;
+      delete s.currentUser.passwordHash;
+
+      cloudState = JSON.parse(JSON.stringify(s));
+      delete cloudState.currentUser.accessToken;
+      delete cloudState.currentUser.supabaseId;
+    }
+
     localStorage.setItem('biozar_state', JSON.stringify(s));
     if (window.BIOZAR_FIREBASE?.saveStateToFirestore && navigator.onLine) {
-      const sizeKb = (JSON.stringify(s).length / 1024).toFixed(1);
+      const sizeKb = (JSON.stringify(cloudState).length / 1024).toFixed(1);
       updateCloudStatus('syncing');
-      window.BIOZAR_FIREBASE.saveStateToFirestore(s).then(ok => {
+      window.BIOZAR_FIREBASE.saveStateToFirestore(cloudState).then(ok => {
         updateCloudStatus('online');
         window._lastRemoteUpdate = Date.now();
         if (state.syncHistory) {
@@ -1364,12 +1392,9 @@ async function loadState() {
 }
 
 // ═══════════════════ LOGIN ═══════════════════
-async function sha256(message) {
-  const msgBuffer = new TextEncoder().encode(message);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-}
+// sha256() a été retiré : il servait au repli d'authentification hors-ligne,
+// remplacé par core/offline-auth.js (PBKDF2 salé, 210 000 itérations).
+// Un SHA-256 non salé ne doit plus réapparaître ici.
 
 // ═══════════════════ CLOUD STATUS ═══════════════════
 function updateCloudStatus(status) {
@@ -1539,17 +1564,42 @@ async function doLoginAsync(login, pass, errEl) {
           login: authResult.user.email,
           name: profile.name || authResult.user.email,
           role: profile.role || 'operator',
-          password: pass,
+          // Le mot de passe en clair ne quitte plus cette fonction : il
+          // partait auparavant dans localStorage et dans le blob cloud.
           supabaseId: authResult.user.id,
           accessToken: authResult.accessToken
         };
       }
     } catch(e) {}
   }
-  if (!user) {
-        var passHash = await sha256(pass);
-    user = (state.users || []).find(function(u) { return u.login === login && (u.passwordHash === passHash); });
+
+  // ── Connexion en ligne réussie : on enrôle l'accès hors-ligne ──────
+  // C'est la seule porte d'entrée vers le mode hors-ligne. Sans cette
+  // étape, un compte qui ne s'est jamais authentifié auprès du serveur
+  // ne peut pas se connecter.
+  if (user && user.accessToken && window.__biozarOfflineAuth) {
+    try {
+      await window.__biozarOfflineAuth.enroll({
+        login: user.login,
+        password: pass,
+        role: user.role,
+        name: user.name
+      });
+    } catch (e) {
+      console.warn('[BIOZAR] enrôlement hors-ligne impossible :', e.message);
+    }
   }
+
+  // ── Repli hors-ligne ───────────────────────────────────────────────
+  // L'ancien repli comparait un SHA-256 NON SALÉ à une table de hachages
+  // codée en dur dans ce fichier — embarquée dans l'APK, donc cassable par
+  // table arc-en-ciel, et deux comptes partageaient le même hachage.
+  if (!user && window.__biozarOfflineAuth) {
+    var offline = await window.__biozarOfflineAuth.verify(login, pass);
+    if (offline.ok) user = offline.user;
+    else if (offline.message) { console.info('[BIOZAR]', offline.message); }
+  }
+
   if (!user) {
     errEl.textContent = 'Login ou mot de passe incorrect';
     errEl.style.display = 'block';
@@ -4038,7 +4088,10 @@ function renderAdminUsers() {
         '<option value="logistics"' + (u.role === 'logistics' ? ' selected' : '') + '>Logistique</option>' +
         '<option value="operator"' + (u.role === 'operator' ? ' selected' : '') + '>Agent</option>' +
       '</select>' +
-      '<input type="text" value="' + u.password + '" id="user-pass-' + i + '" placeholder="Mot de passe" />' +
+      // Plus de champ mot de passe ici : il affichait `u.password` (donc
+      // « undefined », les entrées ne portant pas ce champ) et invitait à
+      // saisir un mot de passe qui partait en clair dans l'état local.
+      // Le mot de passe se change sur Supabase, pas dans un annuaire local.
       '<button class="btn-edit" onclick="updateUser(' + i + ')" ' + disableSelf + '>💾</button>' +
       '<button class="btn-danger" onclick="deleteUser(' + i + ')" ' + disableSelf + '>🗑️</button>' +
       '</div>';
@@ -4048,8 +4101,10 @@ function updateUser(idx) {
   var login = document.getElementById('user-login-' + idx).value.trim();
   var name = document.getElementById('user-name-' + idx).value.trim();
   var role = document.getElementById('user-role-' + idx).value;
-  var password = document.getElementById('user-pass-' + idx).value.trim();
-  if (!login || !name || !password) { showToast('Tous les champs sont requis', 'error'); return; }
+  // Le mot de passe ne se modifie plus ici : il appartient à Supabase.
+  // L'ancien code l'exigeait et l'écrivait EN CLAIR dans u.password, donc
+  // dans localStorage et dans le blob cloud.
+  if (!login || !name) { showToast('Login et nom sont requis', 'error'); return; }
   var u = state.users[idx];
   if (!u) return;
   if (login !== u.login && state.users.some(function(x) { return x.login === login; })) {
@@ -4059,9 +4114,14 @@ function updateUser(idx) {
   u.login = login;
   u.name = name;
   u.role = role;
-  u.password = password;
+  delete u.password;
+  delete u.passwordHash;
   if (state.currentUser && state.currentUser.login === oldLogin) {
-    state.currentUser = u;
+    // On met à jour la session sans l'écraser : state.currentUser porte le
+    // jeton d'accès, l'annuaire `state.users` ne le porte pas.
+    state.currentUser.login = u.login;
+    state.currentUser.name = u.name;
+    state.currentUser.role = u.role;
     state.currentRole = u.role;
     state.user = u.login;
     state.role = u.role;
@@ -4108,18 +4168,32 @@ function addUser() {
   addUserAsync(login, name, role, password, btn);
 }
 async function addUserAsync(login, name, role, password, btn) {
+  var created = false;
   if (window.BIOZAR_AUTH && window.BIOZAR_AUTH.ready) {
     try {
       await window.BIOZAR_AUTH.signUp(login, password, name, role);
-    } catch(e) { showToast('Erreur création compte Supabase', 'error'); }
+      created = true;
+    } catch(e) {
+      // L'ancien code avalait l'erreur puis annonçait « Utilisateur ajouté » :
+      // le compte n'existait pas, l'admin le croyait créé.
+      showToast('Échec de la création du compte sur le serveur', 'error');
+      btn.textContent = '💾 Ajouter'; btn.disabled = false;
+      return;
+    }
   }
-    var passHash = await sha256(password);
-  state.users.push({ login: login, name: name, role: role, passwordHash: passHash });
+
+  // Annuaire local : profil uniquement, jamais d'identifiant. Le mot de
+  // passe ne quitte pas cette fonction — il n'est transmis qu'à Supabase.
+  state.users.push({ login: login, name: name, role: role });
   saveState();
   renderAdminUsers();
   hideAddUserForm();
   btn.textContent = '💾 Ajouter'; btn.disabled = false;
-  showToast('Utilisateur ' + name + ' ajout\u00e9');
+  showToast(
+    created
+      ? 'Utilisateur ' + name + ' ajouté'
+      : 'Profil local ajouté — créez le compte en ligne pour autoriser la connexion'
+  );
 }
 function renderSyncHistory() {
   var tbody = document.getElementById("sync-history-body");
@@ -4163,16 +4237,41 @@ async function changePassword() {
   const pwd = document.getElementById("new-password").value.trim();
   if (!pwd || pwd.length < 4) { showToast("Minimum 4 caractères.", "error"); return; }
   if (!state.currentUser) { showToast("Aucun utilisateur connecté.", "error"); return; }
-  const hashed = await sha256(pwd);
-  // Update the current user's passwordHash in the users array
-  var userIdx = state.users.findIndex(function(u) { return u.login === state.currentUser.login; });
-  if (userIdx >= 0) {
-    state.users[userIdx].passwordHash = hashed;
-    saveState();
-    showToast("Mot de passe changé !");
-  } else {
-    showToast("Utilisateur non trouvé.", "error");
+
+  // L'ancien code hachait en SHA-256 non salé, écrivait le résultat dans
+  // l'annuaire local et annonçait « Mot de passe changé ! » sans jamais
+  // contacter le serveur. Le mot de passe réel restait inchangé.
+  if (!window.BIOZAR_AUTH || !window.BIOZAR_AUTH.ready) {
+    showToast("Connexion au serveur indisponible", "error");
+    return;
   }
+
+  const result = await window.BIOZAR_SUPABASE.updatePassword(
+    pwd,
+    state.currentUser.accessToken
+  );
+
+  if (!result.ok) {
+    showToast(result.error || "Le serveur a refusé le changement", "error");
+    return;
+  }
+
+  // Le serveur a accepté : on ré-enrôle l'accès hors-ligne avec le nouveau
+  // mot de passe, sinon la prochaine connexion sans réseau échouerait.
+  if (window.__biozarOfflineAuth) {
+    try {
+      await window.__biozarOfflineAuth.enroll({
+        login: state.currentUser.login,
+        password: pwd,
+        role: state.currentUser.role,
+        name: state.currentUser.name
+      });
+    } catch (e) {
+      console.warn('[BIOZAR] ré-enrôlement hors-ligne impossible :', e.message);
+    }
+  }
+
+  showToast("Mot de passe changé sur le serveur");
   document.getElementById("new-password").value = "";
 }
 function exportJSON() {
