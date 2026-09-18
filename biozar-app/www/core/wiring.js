@@ -48,6 +48,28 @@ async function install(opts) {
   const pending = await app.db.countPending();
   log(`socle actif · plateforme ${app.platform} · ${pending} opération(s) en attente`);
 
+  /**
+   * Récupère le jeton de la session courante et le transmet au transport.
+   *
+   * La connexion utilisateur intervient après le démarrage, et le jeton peut
+   * être renouvelé entre deux synchronisations. Sans ce rafraîchissement,
+   * les politiques RLS de la migration 002 renvoient 401 sur chaque requête
+   * et la file d'attente ne se vide jamais — silencieusement.
+   *
+   * @returns {boolean} true si un jeton est installé
+   */
+  function refreshAccessToken() {
+    const s = opts.getState();
+    const token = s && s.currentUser ? s.currentUser.accessToken : null;
+    app.setAccessToken(token || null);
+    return Boolean(token);
+  }
+
+  // Une session peut avoir été restaurée du localStorage avant que ce module
+  // (deferred) ne s'exécute : on reprend le jeton immédiatement, sans attendre
+  // le premier événement de synchronisation.
+  if (refreshAccessToken()) log('session restaurée : synchro autorisée');
+
   // ── Indicateur : on remplace l'ancien updateCloudStatus ──
   if (opts.statusHost && app.indicator) {
     window.updateCloudStatus = function (legacyStatus) {
@@ -76,32 +98,65 @@ async function install(opts) {
     log('saveState() doublé vers SQLite (mode shadow)');
   }
 
-  // ── Synchronisation : on remplace initCloudMonitor ──
-  const originalInitCloudMonitor = window.initCloudMonitor;
-  if (typeof originalInitCloudMonitor === 'function') {
-    window.initCloudMonitor = function () {
-      // On laisse l'ancien moniteur gérer la bascule online/offline legacy,
-      // puis on ajoute le déclenchement du vrai moteur de synchro.
-      const r = originalInitCloudMonitor.apply(this, arguments);
+  // ── Déclenchement de la synchronisation ──────────────────────
+  /**
+   * Un cycle de synchro, déclenché par un événement.
+   *
+   * Le jeton est rafraîchi à chaque tentative : il n'existe qu'après
+   * connexion et peut être renouvelé entre deux cycles. Sans ça, les
+   * politiques RLS renvoient 401 en silence et la file ne se vide jamais.
+   */
+  let inFlight = false;
+  async function trigger(reason) {
+    if (inFlight) return null;
 
-      const trigger = () => {
-        app.syncNow().catch(() => {
-          /* l'état d'erreur est déjà affiché par le moniteur */
-        });
-      };
+    refreshAccessToken();
+    if (!app.isAuthorized()) {
+      log(`synchro différée (${reason}) : aucun utilisateur connecté`);
+      return null;
+    }
 
-      window.addEventListener('online', trigger);
-      document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') trigger();
-      });
-
-      // Premier cycle dès l'installation.
-      trigger();
-      return r;
-    };
+    inFlight = true;
+    try {
+      return await app.syncNow();
+    } catch (e) {
+      /* l'état d'erreur est déjà affiché par l'indicateur */
+      log(`cycle de synchro interrompu (${reason}) : ${e.message}`);
+      return null;
+    } finally {
+      inFlight = false;
+    }
   }
 
-  return { available: true, app, bridge, platform: app.platform };
+  // Ces écouteurs sont posés ICI, et non dans un initCloudMonitor() remplacé :
+  // ce module est `deferred`, il s'exécute donc APRÈS le script inline de
+  // démarrage qui a déjà appelé initCloudMonitor(). Remplacer la fonction à
+  // ce stade ne servirait à rien.
+  const host = typeof window !== 'undefined' ? window : null;
+  const doc = typeof document !== 'undefined' ? document : null;
+
+  if (host && typeof host.addEventListener === 'function') {
+    host.addEventListener('online', () => trigger('retour réseau'));
+  }
+  if (doc && typeof doc.addEventListener === 'function') {
+    doc.addEventListener('visibilitychange', () => {
+      if (doc.visibilityState === 'visible') trigger('retour au premier plan');
+    });
+  }
+
+  // Premier cycle dès l'installation — différé d'un tour de boucle pour ne
+  // pas ralentir le démarrage de l'interface.
+  setTimeout(() => trigger('démarrage'), 0);
+
+  return {
+    trigger,
+    available: true,
+    app,
+    bridge,
+    platform: app.platform,
+    refreshAccessToken,
+    isAuthorized: () => app.isAuthorized()
+  };
 }
 
 export { install };

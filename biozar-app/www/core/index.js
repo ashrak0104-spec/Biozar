@@ -147,7 +147,41 @@ async function bootstrap(opts = {}) {
     }
   }
 
-  return { platform, db, engine, monitor, indicator, syncNow, migration, detach };
+  /**
+   * Installe le jeton d'authentification sur le transport.
+   *
+   * La connexion utilisateur intervient après le démarrage : sans cet appel,
+   * les politiques RLS de la migration 002 renvoient 401 sur chaque requête
+   * et la file d'attente ne se vide jamais.
+   *
+   * @returns {boolean} true si un transport a reçu le jeton
+   */
+  function setAccessToken(token) {
+    const transport = engine && engine.transport;
+    if (!transport || typeof transport.setAccessToken !== 'function') return false;
+    return transport.setAccessToken(token);
+  }
+
+  /** Vrai si le transport est prêt à écrire (jeton présent ou non requis). */
+  function isAuthorized() {
+    const transport = engine && engine.transport;
+    if (!transport) return false;
+    if (typeof transport.accessToken === 'undefined') return true;
+    return Boolean(transport.accessToken);
+  }
+
+  return {
+    platform,
+    db,
+    engine,
+    monitor,
+    indicator,
+    syncNow,
+    migration,
+    detach,
+    setAccessToken,
+    isAuthorized
+  };
 }
 
 export {

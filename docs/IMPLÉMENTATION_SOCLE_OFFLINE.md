@@ -15,7 +15,7 @@ npm run gen:server-sql  # régénère la migration PostgreSQL/Supabase
 npm run copy-web        # biozar/web → biozar-app/www
 ```
 
-**État vérifié :** `53 pass / 0 fail`, `16 contrôles réussis`, codes de sortie 0.
+**État vérifié :** `61 pass / 0 fail`, `19 contrôles réussis`, codes de sortie 0.
 
 ---
 
@@ -49,6 +49,8 @@ npm run copy-web        # biozar/web → biozar-app/www
   `signingConfigs` dans `build.gradle`. **Premier jet testé : la regex ciblait le mauvais
   bloc `release`** (celui de `signingConfigs`, pas celui de `buildTypes`) — l'APK serait
   resté non signé sans erreur. Corrigé et re-vérifié structurellement.
+- **Le jeton d'authentification n'atteignait pas la synchro** : les politiques RLS de la migration 002 exigent `auth.uid()`, mais le câblage ne transmettait que la clé anonyme. Chaque requête aurait renvoyé 401 — et la file d'attente ne se serait jamais vidée, sans message d'erreur. Le jeton vit dans `state.currentUser.accessToken`, donc il n'existe qu'**après** la connexion : le transport a maintenant un `setAccessToken()`, rafraîchi avant chaque cycle.
+- **Les déclencheurs de synchro ne s'exécutaient jamais** : ils étaient posés dans un `initCloudMonitor()` remplacé, mais le socle est chargé en module `deferred` — il s'exécute donc **après** le script inline de démarrage qui a déjà appelé `initCloudMonitor()`. Remplacer la fonction à ce stade ne servait à rien. Les écouteurs `online` / `visibilitychange` sont maintenant posés directement à l'installation.
 - **Schéma décalé des données réelles** : `commandes` et `factures` étaient modélisées
   avec des noms inventés (`produit`, `montant`, `numero`, `lignes`) alors que l'app écrit
   `product`, `total`, `num`, `lines`. Schéma aligné sur le réel.

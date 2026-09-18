@@ -227,6 +227,43 @@ check('pas d’animation de translation au changement d’onglet', () => {
   return 'fondu 120 ms, aucune translation';
 });
 
+check('le jeton d’authentification atteint le transport', () => {
+  // Depuis la migration 002, les politiques RLS exigent auth.uid(). Sans
+  // jeton, chaque requête renvoie 401 et la file ne se vide jamais.
+  const wiring = fs.readFileSync(path.join(WEB, 'core', 'wiring.js'), 'utf8');
+  const transport = fs.readFileSync(path.join(WEB, 'core', 'transport-supabase.js'), 'utf8');
+  const index = fs.readFileSync(path.join(WEB, 'core', 'index.js'), 'utf8');
+
+  // Méthode de classe dans le transport, fonction dans la façade : les deux
+  // formes sont acceptées, ce qui compte est que le jeton soit modifiable
+  // après construction.
+  assert(
+    /setAccessToken\(token\)\s*\{/.test(transport),
+    'le transport doit pouvoir recevoir un jeton après sa construction'
+  );
+  assert(
+    /Bearer \$\{this\.accessToken\}/.test(transport),
+    'le jeton doit être envoyé dans l’en-tête Authorization'
+  );
+  assert(
+    /currentUser\.accessToken/.test(wiring),
+    'le câblage doit reprendre le jeton de la session courante'
+  );
+  assert(
+    /refreshAccessToken\(\);/.test(wiring) && /function trigger\(/.test(wiring),
+    'le jeton doit être rafraîchi avant chaque cycle de synchro'
+  );
+  assert(
+    /function setAccessToken\(token\)/.test(index) && /function isAuthorized\(\)/.test(index),
+    'bootstrap() doit exposer setAccessToken et isAuthorized'
+  );
+  assert(
+    !/window\.initCloudMonitor = function/.test(wiring),
+    'les déclencheurs de synchro ne doivent plus dépendre d’initCloudMonitor : ce module est deferred'
+  );
+  return 'jeton repris de la session, rafraîchi à chaque cycle';
+});
+
 // ── 7. Aucun secret versionné ──
 check('aucun secret ni binaire de build versionné', () => {
   const tracked = execSync('git ls-files', { cwd: ROOT, encoding: 'utf8' }).split('\n');

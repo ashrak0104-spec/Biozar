@@ -35,6 +35,26 @@ class SupabaseTransport {
     this.fetchImpl = cfg.fetchImpl || fetch;
   }
 
+  /**
+   * Installe (ou retire) le jeton d'authentification.
+   *
+   * Indispensable depuis la migration 002 : les politiques RLS des tables
+   * d'entités exigent `auth.uid() IS NOT NULL`. Avec la seule clé anon,
+   * chaque requête renvoie 401 et la file d'attente ne se vide jamais.
+   *
+   * Le jeton arrive après le démarrage (il n'existe qu'une fois
+   * l'utilisateur connecté), d'où ce setter plutôt qu'un paramètre de
+   * construction.
+   *
+   * @returns {boolean} true si la valeur a changé
+   */
+  setAccessToken(token) {
+    const next = token || null;
+    if (next === this.accessToken) return false;
+    this.accessToken = next;
+    return true;
+  }
+
   _headers(extra = {}) {
     const h = {
       'Content-Type': 'application/json',
