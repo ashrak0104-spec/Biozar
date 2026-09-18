@@ -15,7 +15,7 @@ npm run gen:server-sql  # régénère la migration PostgreSQL/Supabase
 npm run copy-web        # biozar/web → biozar-app/www
 ```
 
-**État vérifié :** `101 pass / 0 fail`, `20 contrôles réussis`, codes de sortie 0.
+**État vérifié :** `101 pass / 0 fail`, `21 contrôles réussis`, codes de sortie 0.
 
 ---
 
@@ -53,6 +53,10 @@ npm run copy-web        # biozar/web → biozar-app/www
 - **Le Service Worker ne préchargeait pas le socle** : `PRECACHE_ASSETS` datait d'avant l'existence de `core/`. Les 10 modules n'étaient ni préchargés ni routés — l'application n'aurait pas démarré hors-ligne au premier lancement, ce qui est précisément la promesse du produit. Ils sont maintenant préchargés (cache passé en `biozar-v5` pour invalider l'ancien).
 - **Le repli hors-ligne renvoyait du HTML pour un module** : `networkFirst()` retombait sur `index.html` pour *toute* requête en échec. Pour un `import` ES, cela produit une erreur de type MIME opaque, bien plus difficile à diagnostiquer qu'un 503 explicite. Le repli est désormais réservé aux navigations.
 - **Les déclencheurs de synchro ne s'exécutaient jamais** : ils étaient posés dans un `initCloudMonitor()` remplacé, mais le socle est chargé en module `deferred` — il s'exécute donc **après** le script inline de démarrage qui a déjà appelé `initCloudMonitor()`. Remplacer la fonction à ce stade ne servait à rien. Les écouteurs `online` / `visibilitychange` sont maintenant posés directement à l'installation.
+- **`lib.rs` ne compilait pas** : `app.get_webview_window("main")` vient du trait
+  `tauri::Manager`, qui n'était pas importé. Erreur de compilation certaine au
+  `cargo build`, invisible ici puisque Rust n'est pas installable. Trouvée en
+  croisant la documentation officielle.
 - **Schéma décalé des données réelles** : `commandes` et `factures` étaient modélisées
   avec des noms inventés (`produit`, `montant`, `numero`, `lignes`) alors que l'app écrit
   `product`, `total`, `num`, `lines`. Schéma aligné sur le réel.
@@ -176,7 +180,7 @@ serveur. Trois tests verrouillent ce comportement.
 | Élément | Statut | Raison |
 |---|---|---|
 | **Exécution dans un navigateur** | ⚠️ partielle | Aucun navigateur dans le sandbox (Chromium : paquets système manquants **et** CDN de téléchargement bloqué — les deux tentés). `jsdom` couvre la couche DOM : l'indicateur de synchronisation y est monté et ses attributs relus (21 tests). **Reste non vérifié** : le rendu visuel réel, les WebView Android/WebView2, et le chargement des modules par un vrai moteur. Le graphe d'imports ESM est vérifié statiquement (10 modules, 16 imports). |
-| **Compilation Rust / Tauri** | ❌ non vérifié | `cargo` absent. Conf JSON, chemins (`frontendDist`, `include_str!`) et icônes vérifiés ; le code Rust non. |
+| **Compilation Rust / Tauri** | ⚠️ partielle | `cargo` non installable : rustup renvoie `000` (injoignable) et apt n'a pas les droits. **Le code Rust n'a donc jamais été compilé.** En revanche `tauri.conf.json` et `capabilities/default.json` ont été validés contre les schémas JSON officiels extraits de `tauri-apps/tauri` (branche `dev`), et les 6 identifiants de permission vérifiés un par un dans `crates/tauri/permissions/` et `plugins/sql/permissions/`. |
 | **Build APK de bout en bout** | ❌ non vérifié | Android SDK et JDK absents. Le workflow corrigé n'a pas été exécuté. |
 | **Adaptateurs Capacitor / Tauri** | ⚠️ partiellement | Exercés contre de faux greffons imitant les APIs documentées (19 tests) : noms de méthodes, paramètres liés, ordre BEGIN/COMMIT/ROLLBACK, découpage du script SQL. **Jamais exécutés contre les vrais greffons** — il faut un APK et un EXE réels pour ça. |
 | **PWA navigateur** | ❌ non câblé | `createAdapter('browser')` lève une erreur explicite ; manque sql.js + OPFS. APK et EXE n'en ont pas besoin. |

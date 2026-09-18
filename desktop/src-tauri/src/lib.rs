@@ -9,6 +9,9 @@
 //! embarqué à la compilation via `include_str!`. Une seule source de
 //! vérité pour les deux plateformes.
 
+// `Manager` fournit get_webview_window() : sans cet import, le code ne
+// compile pas (méthode introuvable sur le gestionnaire d'application).
+use tauri::Manager;
 use tauri_plugin_sql::{Migration, MigrationKind};
 
 /// Schéma partagé, injecté au moment de la compilation.
