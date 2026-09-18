@@ -483,6 +483,40 @@ check('aucun identifiant connu en clair dans l’arbre', () => {
   return 'arbre propre, keystore hors configuration versionnée';
 });
 
+check('configuration Capacitor cohérente pour l’APK', () => {
+  const conf = JSON.parse(
+    fs.readFileSync(path.join(ROOT, 'biozar-app', 'capacitor.config.json'), 'utf8')
+  );
+
+  assert(conf.appId === 'mg.biozar.app', `appId inattendu : ${conf.appId}`);
+  assert(conf.webDir, 'webDir est requis');
+
+  // Le webDir doit exister et contenir l'application, sinon `cap sync`
+  // produit un APK qui démarre sur une page blanche.
+  const webDirAbs = path.join(ROOT, 'biozar-app', conf.webDir);
+  assert(fs.existsSync(path.join(webDirAbs, 'index.html')), `${conf.webDir}/index.html absent`);
+  assert(fs.existsSync(path.join(webDirAbs, 'sw.js')), `${conf.webDir}/sw.js absent`);
+  assert(
+    fs.existsSync(path.join(webDirAbs, 'core', 'index.js')),
+    `${conf.webDir}/core/ absent : le socle ne serait pas embarqué`
+  );
+
+  // https obligatoire : en http, crypto.subtle est indisponible et
+  // l'authentification hors-ligne refuse de démarrer.
+  assert(
+    conf.server && conf.server.androidScheme === 'https',
+    'androidScheme doit être https (crypto.subtle exige un contexte sécurisé)'
+  );
+
+  // La signature ne doit pas passer par la configuration versionnée.
+  assert(
+    !conf.android || !conf.android.buildOptions,
+    'android.buildOptions ne doit pas figurer dans un fichier versionné'
+  );
+
+  return `appId ${conf.appId}, webDir ${conf.webDir} complet, androidScheme https`;
+});
+
 // ── 7. Aucun secret versionné ──
 check('aucun secret ni binaire de build versionné', () => {
   const tracked = execSync('git ls-files', { cwd: ROOT, encoding: 'utf8' }).split('\n');

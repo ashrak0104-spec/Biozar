@@ -15,7 +15,7 @@ npm run gen:server-sql  # régénère la migration PostgreSQL/Supabase
 npm run copy-web        # biozar/web → biozar-app/www
 ```
 
-**État vérifié :** `125 pass / 0 fail`, `25 contrôles réussis`, codes de sortie 0.
+**État vérifié :** `125 pass / 0 fail`, `26 contrôles réussis`, codes de sortie 0.
 
 ---
 
