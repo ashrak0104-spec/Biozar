@@ -140,9 +140,20 @@ check('le socle est en ES modules (chargeable par le navigateur)', () => {
 check('schéma SQL généré et exécutable sur SQLite', () => {
   const db = new DatabaseSync(':memory:');
   db.exec(generateSchema());
-  const tables = db.prepare("SELECT COUNT(*) n FROM sqlite_master WHERE type='table'").get().n;
-  assert(tables >= 17, `${tables} tables créées, 17 attendues`);
-  return `${tables} tables`;
+
+  // sqlite_sequence (créée par AUTOINCREMENT) et sqlite_autoindex_* sont des
+  // objets internes : les compter ferait passer le schéma pour plus riche
+  // qu'il ne l'est.
+  const tables = db
+    .prepare("SELECT COUNT(*) n FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
+    .get().n;
+  const indexes = db
+    .prepare("SELECT COUNT(*) n FROM sqlite_master WHERE type='index' AND name NOT LIKE 'sqlite_%'")
+    .get().n;
+
+  assert(tables === 17, `${tables} tables applicatives, 17 attendues`);
+  assert(indexes >= 47, `${indexes} index explicites, au moins 47 attendus`);
+  return `${tables} tables applicatives, ${indexes} index`;
 });
 
 check('migration Tauri en phase avec la source JS', () => {

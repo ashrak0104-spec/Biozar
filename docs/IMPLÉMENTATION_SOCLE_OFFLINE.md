@@ -8,14 +8,14 @@
 ## 1. Commandes
 
 ```bash
-npm test                # 53 tests, ~5 s
+npm test                # 80 tests, ~6 s
 npm run verify          # 16 contrôles d'intégrité du paquet semi-offline
 npm run gen:sql         # régénère le schéma SQLite consommé par Tauri
 npm run gen:server-sql  # régénère la migration PostgreSQL/Supabase
 npm run copy-web        # biozar/web → biozar-app/www
 ```
 
-**État vérifié :** `61 pass / 0 fail`, `20 contrôles réussis`, codes de sortie 0.
+**État vérifié :** `80 pass / 0 fail`, `20 contrôles réussis`, codes de sortie 0.
 
 ---
 
@@ -75,6 +75,11 @@ biozar/web/core/            10 modules ES (chargement natif navigateur, sans bun
 └── index.js                bootstrap()
 ```
 
+Le schéma produit **17 tables applicatives et 47 index explicites**, en 65 instructions.
+`sqlite_sequence` (créée par `AUTOINCREMENT`) et `sqlite_autoindex_*` sont des objets
+internes de SQLite : les compter ferait passer le schéma pour plus riche qu'il ne l'est.
+Le contrôle `verify` les exclut désormais — il annonçait auparavant « 18 tables ».
+
 ### Conversion en ES modules — pourquoi
 
 Le socle était écrit en CommonJS (`require` / `module.exports`). L'application n'a
@@ -86,7 +91,7 @@ nativement (`<script type="module">`). Contrainte vérifiée automatiquement : *
 relatif doit porter l'extension `.js`**, sinon l'échec n'apparaît que dans la WebView,
 sur le terrain.
 
-### Ce que les 53 tests prouvent
+### Ce que les 80 tests prouvent
 
 | Test | Code réellement exécuté |
 |---|---|
@@ -104,6 +109,11 @@ sur le terrain.
 | `deux récoltes du même produit le même jour restent distinctes` | `stableId()` avec indice d'occurrence |
 | `parcours réaliste : plusieurs éditions successives` | 4 `syncState()` successifs, quantités vérifiées en base |
 | `une écriture via la façade est durable puis synchronisée` | `bootstrap()` + `syncNow()` + `writeLegacyMirror` |
+| `chaque instruction découpée s'exécute individuellement sur SQLite` | `splitStatements()` sur le vrai schéma : 65 instructions rejouées une par une |
+| `une transaction valide fait BEGIN puis COMMIT` | `CapacitorAdapter.transaction()` contre un faux greffon Capacitor |
+| `un échec dans la transaction fait ROLLBACK` | `TauriAdapter.transaction()` contre un faux greffon tauri-plugin-sql |
+| `Db.open fonctionne sur CapacitorAdapter` | `Db` + `upsert` + `findAll` adossés à un vrai SQLite via le faux greffon |
+| `install() reprend le jeton de state.currentUser` | `wiring.install()` dans un DOM factice, en-têtes `Authorization` capturés |
 
 Tous tournent contre un **vrai SQLite** (`node:sqlite`). Seul le transport réseau est
 simulé — et le faux serveur applique lui aussi le LWW, pour que les tests de conflit ne
@@ -166,7 +176,7 @@ serveur. Trois tests verrouillent ce comportement.
 | **Exécution dans un navigateur** | ❌ non vérifié | Aucun navigateur dans le sandbox. Le graphe d'imports ESM est vérifié statiquement (10 modules, 16 imports), mais le comportement runtime ne l'est pas. |
 | **Compilation Rust / Tauri** | ❌ non vérifié | `cargo` absent. Conf JSON, chemins (`frontendDist`, `include_str!`) et icônes vérifiés ; le code Rust non. |
 | **Build APK de bout en bout** | ❌ non vérifié | Android SDK et JDK absents. Le workflow corrigé n'a pas été exécuté. |
-| **Adaptateurs Capacitor / Tauri** | ❌ non exécutés | Écrits d'après les APIs documentées. Seul `NodeAdapter` est couvert par les tests. |
+| **Adaptateurs Capacitor / Tauri** | ⚠️ partiellement | Exercés contre de faux greffons imitant les APIs documentées (19 tests) : noms de méthodes, paramètres liés, ordre BEGIN/COMMIT/ROLLBACK, découpage du script SQL. **Jamais exécutés contre les vrais greffons** — il faut un APK et un EXE réels pour ça. |
 | **PWA navigateur** | ❌ non câblé | `createAdapter('browser')` lève une erreur explicite ; manque sql.js + OPFS. APK et EXE n'en ont pas besoin. |
 | **Migration SQL appliquée** | ❌ non exécutée | Syntaxe validée par le parseur PostgreSQL 18, mais jamais passée contre un vrai serveur. |
 | **Mode shadow en conditions réelles** | ❌ non observé | La logique de différenciation est testée (17 tests), pas son comportement dans la WebView. |
