@@ -8,14 +8,14 @@
 ## 1. Commandes
 
 ```bash
-npm test                # 80 tests, ~6 s
+npm test                # 101 tests, ~7 s
 npm run verify          # 16 contrôles d'intégrité du paquet semi-offline
 npm run gen:sql         # régénère le schéma SQLite consommé par Tauri
 npm run gen:server-sql  # régénère la migration PostgreSQL/Supabase
 npm run copy-web        # biozar/web → biozar-app/www
 ```
 
-**État vérifié :** `80 pass / 0 fail`, `20 contrôles réussis`, codes de sortie 0.
+**État vérifié :** `101 pass / 0 fail`, `20 contrôles réussis`, codes de sortie 0.
 
 ---
 
@@ -91,7 +91,7 @@ nativement (`<script type="module">`). Contrainte vérifiée automatiquement : *
 relatif doit porter l'extension `.js`**, sinon l'échec n'apparaît que dans la WebView,
 sur le terrain.
 
-### Ce que les 80 tests prouvent
+### Ce que les 101 tests prouvent
 
 | Test | Code réellement exécuté |
 |---|---|
@@ -114,6 +114,8 @@ sur le terrain.
 | `un échec dans la transaction fait ROLLBACK` | `TauriAdapter.transaction()` contre un faux greffon tauri-plugin-sql |
 | `Db.open fonctionne sur CapacitorAdapter` | `Db` + `upsert` + `findAll` adossés à un vrai SQLite via le faux greffon |
 | `install() reprend le jeton de state.currentUser` | `wiring.install()` dans un DOM factice, en-têtes `Authorization` capturés |
+| `sync_error : alerte, rouge, bouton Réessayer` | `createSyncIndicator()` monté dans jsdom, attributs lus sur le DOM réel |
+| `aucune animation permanente : le mouvement est conditionné` | le CSS **injecté** est relu : toute `animation:` doit être derrière `prefers-reduced-motion` |
 
 Tous tournent contre un **vrai SQLite** (`node:sqlite`). Seul le transport réseau est
 simulé — et le faux serveur applique lui aussi le LWW, pour que les tests de conflit ne
@@ -173,7 +175,7 @@ serveur. Trois tests verrouillent ce comportement.
 
 | Élément | Statut | Raison |
 |---|---|---|
-| **Exécution dans un navigateur** | ❌ non vérifié | Aucun navigateur dans le sandbox. Le graphe d'imports ESM est vérifié statiquement (10 modules, 16 imports), mais le comportement runtime ne l'est pas. |
+| **Exécution dans un navigateur** | ⚠️ partielle | Aucun navigateur dans le sandbox (Chromium : paquets système manquants **et** CDN de téléchargement bloqué — les deux tentés). `jsdom` couvre la couche DOM : l'indicateur de synchronisation y est monté et ses attributs relus (21 tests). **Reste non vérifié** : le rendu visuel réel, les WebView Android/WebView2, et le chargement des modules par un vrai moteur. Le graphe d'imports ESM est vérifié statiquement (10 modules, 16 imports). |
 | **Compilation Rust / Tauri** | ❌ non vérifié | `cargo` absent. Conf JSON, chemins (`frontendDist`, `include_str!`) et icônes vérifiés ; le code Rust non. |
 | **Build APK de bout en bout** | ❌ non vérifié | Android SDK et JDK absents. Le workflow corrigé n'a pas été exécuté. |
 | **Adaptateurs Capacitor / Tauri** | ⚠️ partiellement | Exercés contre de faux greffons imitant les APIs documentées (19 tests) : noms de méthodes, paramètres liés, ordre BEGIN/COMMIT/ROLLBACK, découpage du script SQL. **Jamais exécutés contre les vrais greffons** — il faut un APK et un EXE réels pour ça. |
