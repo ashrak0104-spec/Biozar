@@ -53,7 +53,7 @@ echo  ╔═══════════════════════�
 echo  ║   INFO Keystore                              ║
 echo  ║   Alias: biozar                               ║
 echo  ║   Fichier: android\app\biozar-release.keystore║
-echo  ║   Mot de passe: biozar2026                    ║
+echo  ║   Mot de passe: voir variable KEYSTORE_PASSWORD ║
 echo  ╚══════════════════════════════════════════════╝
 echo.
 echo  ⚠️  IMPORTANT : Change le mot de passe du keystore

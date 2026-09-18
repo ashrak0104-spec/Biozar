@@ -60,7 +60,9 @@ CREATE POLICY "Admins can update all profiles"
   );
 
 -- 5. Fonction pour créer un user admin (exécuter après)
--- SELECT create_biozar_admin('admin@biozar.mg', 'biozar2026', 'Admin Direction', 'admin');
+-- Remplacez <MOT_DE_PASSE> par un mot de passe fort, choisi hors de ce
+-- fichier : il ne doit pas être versionné.
+-- SELECT create_biozar_admin('admin@biozar.mg', '<MOT_DE_PASSE>', 'Admin Direction', 'admin');
 CREATE OR REPLACE FUNCTION create_biozar_admin(
   p_email TEXT,
   p_password TEXT,

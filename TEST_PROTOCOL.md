@@ -21,7 +21,7 @@
 
 | # | Action | Résultat Attendu | OK? |
 |---|--------|-------------------|-----|
-| 2.1 | Saisir `admin` / `biozar2026` | Connexion réussie, toast "Bienvenue admin !" | ☐ |
+| 2.1 | Saisir `admin` / `<mot de passe admin>` | Connexion réussie, toast "Bienvenue admin !" | ☐ |
 | 2.2 | Saisir mauvais identifiant | Message rouge "❌ Identifiant ou mot de passe incorrect." | ☐ |
 | 2.3 | Appui sur Enter dans le champ mot de passe | Déclenche la connexion | ☐ |
 
@@ -124,7 +124,7 @@ npx -y firebase-tools@latest deploy --only hosting
 | 8.1 | Admin > Agents > Créer agent "test"/"1234"/"Production" | Agent créé | ☐ |
 | 8.2 | Se déconnecter, se reconnecter avec test/1234 | Accès limité à Production uniquement | ☐ |
 | 8.3 | Vérifier que les onglets Finance/Clients sont cachés | Masqués pour rôle Production | ☐ |
-| 8.4 | Se reconnecter avec admin/biozar2026 | Accès complet restauré | ☐ |
+| 8.4 | Se reconnecter avec admin/<mot de passe admin> | Accès complet restauré | ☐ |
 
 ---
 
@@ -169,7 +169,7 @@ npx -y firebase-tools@latest deploy --only hosting
 ### ✅ Critères de validation
 
 - [ ] **Splash** : affiché et disparaît dans les 3s
-- [ ] **Login** : admin/biozar2026 fonctionne
+- [ ] **Login** : admin/<mot de passe admin> fonctionne
 - [ ] **PWA** : installable sur l'écran d'accueil
 - [ ] **Offline** : fonctionne sans connexion après cache
 - [ ] **Badge mise à jour** : apparaît après modification du SW

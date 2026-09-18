@@ -13,11 +13,14 @@
 | **APK Android** | `biozar-v1.0.1-final.apk` (dans le dossier projet) |
 
 ### Identifiants de Démo
-| Rôle | Identifiant | Mot de passe |
-|------|-------------|--------------|
-| **Admin** (Jean) | `admin` ou `jean` | `biozar2026` |
-| **Commercial** | `commercial` ou `pascal` | `comm2026` |
-| **Production** | `production` | `prod2026` |
+
+Les comptes de démonstration sont créés sur le serveur d'authentification.
+**Les mots de passe ne figurent plus dans ce document** : ils y étaient
+auparavant en clair, dans un fichier versionné, et l'un d'eux servait aussi de
+mot de passe au keystore de signature Android.
+
+Demandez-les au responsable technique, ou créez vos propres comptes depuis
+l'écran d'administration une fois connecté.
 
 ---
 

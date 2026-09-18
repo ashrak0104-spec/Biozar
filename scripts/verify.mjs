@@ -440,6 +440,49 @@ check('authentification hors-ligne : PBKDF2 et enrôlement obligatoire', () => {
   return `PBKDF2 ${iters} itérations, enrôlement requis, temps constant`;
 });
 
+check('aucun identifiant connu en clair dans l’arbre', () => {
+  // Ces chaînes ont été versionnées : mot de passe du keystore de signature
+  // Android ET mot de passe des comptes admin/jean (sha256 de la première
+  // égalait exactement le hachage embarqué). Elles restent dans l'historique
+  // Git et doivent donc être considérées comme compromises et remplacées.
+  const KNOWN_LEAKS = ['biozar2026', 'comm2026', 'prod2026'];
+
+  const found = [];
+  const walk = (dir) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (entry.name === '.git' || entry.name === 'node_modules') continue;
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (entry.isFile()) {
+        // Ce script doit bien contenir la liste des fuites connues pour
+        // pouvoir les chercher : il est exclu de son propre balayage.
+        if (full === fileURLToPath(import.meta.url)) continue;
+        let body;
+        try {
+          body = fs.readFileSync(full, 'utf8');
+        } catch (_) {
+          continue; // binaire
+        }
+        for (const leak of KNOWN_LEAKS) {
+          if (body.includes(leak)) found.push(`${path.relative(ROOT, full)} → ${leak}`);
+        }
+      }
+    }
+  };
+  walk(ROOT);
+
+  assert(found.length === 0, `identifiants en clair : ${found.join(', ')}`);
+
+  // Le keystore ne doit plus être configurable depuis un fichier versionné.
+  const capConf = fs.readFileSync(path.join(ROOT, 'biozar-app', 'capacitor.config.json'), 'utf8');
+  assert(
+    !/keystorePassword|keystoreAliasPassword/.test(capConf),
+    'capacitor.config.json ne doit plus porter de mot de passe de keystore'
+  );
+
+  return 'arbre propre, keystore hors configuration versionnée';
+});
+
 // ── 7. Aucun secret versionné ──
 check('aucun secret ni binaire de build versionné', () => {
   const tracked = execSync('git ls-files', { cwd: ROOT, encoding: 'utf8' }).split('\n');

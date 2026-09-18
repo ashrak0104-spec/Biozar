@@ -15,7 +15,7 @@ npm run gen:server-sql  # régénère la migration PostgreSQL/Supabase
 npm run copy-web        # biozar/web → biozar-app/www
 ```
 
-**État vérifié :** `125 pass / 0 fail`, `24 contrôles réussis`, codes de sortie 0.
+**État vérifié :** `125 pass / 0 fail`, `25 contrôles réussis`, codes de sortie 0.
 
 ---
 
@@ -248,6 +248,34 @@ Il passe maintenant par GoTrue (`PUT /auth/v1/user`, nouvelle méthode
 l'erreur du serveur est affichée — plus de faux succès. Même correction pour
 `addUserAsync()`, qui annonçait « Utilisateur ajouté » même quand la création
 Supabase avait échoué.
+
+### 7.4 Un mot de passe versionné, partagé entre le keystore et l'admin
+
+Un même mot de passe était en clair dans six fichiers suivis par Git — mot de
+passe du keystore de signature Android (`capacitor.config.json`,
+`BUILD_RELEASE.bat`) **et** mot de passe des comptes administrateurs
+(`RAPPORT_INVESTISSEUR.md`, `TEST_PROTOCOL.md`, `migration-auth.sql`).
+
+Vérification faite, le lien est établi sans ambiguïté : le SHA-256 de ce mot de
+passe vaut exactement `f2117626cb3800365e06eb9decafeabb1f6c0401afd4b08f1e888561bad2d302`,
+c'est-à-dire le hachage qui était embarqué pour `admin` **et** `jean`.
+
+La valeur n'est pas reproduite ici : le contrôle d'intégrité interdit sa
+présence dans l'arbre, et un document n'a pas à réexposer un identifiant
+compromis.
+
+Conséquence : quiconque avait accès au dépôt pouvait à la fois se connecter en
+administrateur et signer une mise à jour de l'APK.
+
+Retiré de l'arbre de travail, et `buildOptions` supprimé de
+`capacitor.config.json` — la signature passe par `scripts/android-signing.sh`,
+qui lit `KEYSTORE_PASSWORD` dans l'environnement.
+
+> ⚠️ **Ces identifiants restent dans l'historique Git.** Ils doivent être
+> considérés comme compromis : **le keystore doit être régénéré** et les mots de
+> passe des comptes changés. Je n'ai pas réécrit l'historique — c'est une
+> décision qui vous appartient, elle réécrit tous les SHA et casse les clones
+> existants.
 
 ### Ce que cela ne garantit pas
 

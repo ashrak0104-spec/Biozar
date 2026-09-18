@@ -9,14 +9,7 @@
   },
   "android": {
     "allowMixedContent": true,
-    "backgroundColor": "#1a3d1f",
-    "buildOptions": {
-      "keystorePath": "biozar-release.keystore",
-      "keystorePassword": "biozar2026",
-      "keystoreAlias": "biozar",
-      "keystoreAliasPassword": "biozar2026",
-      "releaseType": "APK"
-    }
+    "backgroundColor": "#1a3d1f"
   },
   "plugins": {
     "SplashScreen": {

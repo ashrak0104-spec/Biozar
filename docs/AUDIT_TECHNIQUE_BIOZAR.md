@@ -56,7 +56,7 @@ dossier n'existe pas.
 ```json
 "android": { "buildOptions": {
   "keystorePath": "biozar-release.keystore",
-  "keystorePassword": "biozar2026", ...
+  "keystorePassword": "<en clair dans le fichier>, ...
 }}
 ```
 
@@ -80,8 +80,11 @@ biozar-v1.0.1-final.apk   ← 28 Mo
 ```
 
 Quiconque a accès au dépôt peut signer une mise à jour à ta place. À retirer de l'historique
-et à remplacer par un secret CI. Le mot de passe `biozar2026` est de plus en dur dans
-`capacitor.config.json`.
+et à remplacer par un secret CI. Le mot de passe du keystore était de plus en clair dans
+`capacitor.config.json` — c'était aussi le mot de passe du compte admin,
+comme le confirmait le SHA-256 du mot de passe alors documenté dans
+`RAPPORT_INVESTISSEUR.md`, strictement égal au hachage embarqué pour les
+comptes `admin` et `jean`. Les deux ont été retirés.
 
 ### 1.4 La base de données distante est ouverte au monde
 
