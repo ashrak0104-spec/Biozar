@@ -1,90 +1,113 @@
-/* ═══════════════════════════════════════
-   BIOZAR – Service Worker PWA
-   Stratégie : Cache First (app shell)
-   ═══════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════
+   BIOZAR — Service Worker
+   ─────────────────────────────────────────────────────────────────
+   Stratégie par type de ressource :
 
-const CACHE_NAME = 'biozar-v3';
+     • Navigation / index.html ......... network-first (timeout 3 s) + cache
+     • version.json, manifest.json ..... network-only (jamais servis périmés)
+     • fonts/, vendor/, chart.js, icons  cache-first (assets immuables)
+     • *.supabase.co (données métier) .. network-only, JAMAIS mis en cache
+     • /api/* (config Cloudflare) ...... network-only
 
-// Ressources à pré-cacher au moment de l'installation
-const PRE_CACHE = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/chart.js',
-  '/icons/icon-192x192.png',
-  '/icons/icon-512x512.png',
-  '/icons/icon-512x512-maskable.png'
+   Le shell était en cache-first auparavant : l'app déployée ne recevait
+   plus aucune mise à jour. C'est corrigé.
+   ═══════════════════════════════════════════════════════════════ */
+
+const CACHE_VERSION = 'biozar-v4';
+const CACHE_SHELL = `${CACHE_VERSION}-shell`;
+const CACHE_ASSETS = `${CACHE_VERSION}-assets`;
+
+const NAVIGATION_TIMEOUT_MS = 3000;
+
+// Pré-cache complet : une première ouverture hors-ligne doit fonctionner.
+const PRECACHE_ASSETS = [
+  'chart.js',
+  'supabase-init.js',
+  'vendor/html2canvas.min.js',
+  'vendor/jspdf.umd.min.js',
+  'fonts/inter-300.woff2',
+  'fonts/inter-400.woff2',
+  'fonts/inter-500.woff2',
+  'fonts/inter-600.woff2',
+  'fonts/inter-700.woff2',
+  'fonts/inter-800.woff2',
+  'fonts/playfair-700.woff2',
+  'icons/icon-192x192.png',
+  'icons/icon-512x512.png',
+  'icons/icon-512x512-maskable.png',
+  'icons/icon-192x192-maskable.png',
+  'icons/logo-biozar.png',
+  'icons/logo-biozar-alt.png'
 ];
 
-// Fonts Google à mettre en cache (préchargement)
-const FONT_CACHE = 'biozar-fonts-v1';
-const FONT_URLS = [
-  'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@700&display=swap',
-  'https://fonts.gstatic.com/'
-];
-
-// CDN Libraries (PDF, export)
-const CDN_CACHE = 'biozar-cdn-v2';
-const CDN_URLS = [
-  'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js'
-];
-
-// ─── INSTALLATION ───
-self.addEventListener('install', event => {
+// ─── INSTALLATION ───────────────────────────────────────────────
+self.addEventListener('install', (event) => {
   event.waitUntil(
     (async () => {
-      const cache = await caches.open(CACHE_NAME);
-      await cache.addAll(PRE_CACHE);
-      // Pré-cache des CDN (html2canvas, jsPDF)
-      try {
-        const cdnCache = await caches.open(CDN_CACHE);
-        await cdnCache.addAll(CDN_URLS);
-      } catch (e) {
-        console.warn('[SW] CDN cache skipped (offline install)');
-      }
+      const [shell, assets] = await Promise.all([
+        caches.open(CACHE_SHELL),
+        caches.open(CACHE_ASSETS)
+      ]);
+
+      // Le shell doit absolument être en cache : c'est le repli hors-ligne.
+      await shell.add(new Request('index.html', { cache: 'reload' }));
+
+      // Les assets sont ajoutés un par un : un échec ne doit pas
+      // faire échouer toute l'installation (ex. logo manquant).
+      await Promise.all(
+        PRECACHE_ASSETS.map(async (path) => {
+          try {
+            const res = await fetch(path, { cache: 'reload' });
+            if (res && res.ok) await assets.put(path, res);
+          } catch (e) {
+            console.warn(`[SW] pré-cache ignoré : ${path}`);
+          }
+        })
+      );
+
       await self.skipWaiting();
     })()
   );
 });
 
-// ─── ACTIVATION (nettoyage des anciens caches) ───
-self.addEventListener('activate', event => {
+// ─── ACTIVATION — purge des caches obsolètes ──────────────────────
+self.addEventListener('activate', (event) => {
   event.waitUntil(
     (async () => {
+      const valid = new Set([CACHE_SHELL, CACHE_ASSETS]);
       const keys = await caches.keys();
-      await Promise.all(
-        keys
-          .filter(key => key !== CACHE_NAME && key !== FONT_CACHE && key !== CDN_CACHE)
-          .map(key => caches.delete(key))
-      );
+      await Promise.all(keys.filter((k) => !valid.has(k)).map((k) => caches.delete(k)));
       await self.clients.claim();
     })()
   );
 });
 
-// ─── MESSAGE (SKIP WAITING depuis la page) ───
-self.addEventListener('message', event => {
-  if (event.data === 'SKIP_WAITING') {
+// ─── MESSAGES (depuis la page) ──────────────────────────────────
+self.addEventListener('message', (event) => {
+  const data = event.data;
+  if (!data) return;
+
+  if (data === 'SKIP_WAITING' || data.type === 'SKIP_WAITING') {
     self.skipWaiting();
+    return;
   }
-  // Afficher une notification depuis le Service Worker (lancée par la page)
-  if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
-    const { title, body, tag, icon, incidentId } = event.data.payload || {};
+
+  if (data.type === 'SHOW_NOTIFICATION') {
+    const { title, body, tag, icon, incidentId } = data.payload || {};
     self.registration.showNotification(title || 'BIOZAR', {
       body: body || '',
-      icon: icon || '/icons/icon-192x192.png',
-      badge: '/icons/icon-192x192.png',
+      icon: icon || 'icons/icon-192x192.png',
+      badge: 'icons/icon-192x192.png',
       tag: tag || 'biozar-incident',
-      data: { incidentId: incidentId || null, url: event.data.url || '/' },
+      data: { incidentId: incidentId || null, url: data.url || './' },
       vibrate: [200, 100, 200],
       requireInteraction: true
     });
   }
 });
 
-// ─── NOTIFICATION PUSH (depuis un serveur ou FCM) ───
-self.addEventListener('push', event => {
+// ─── PUSH ───────────────────────────────────────────────────────
+self.addEventListener('push', (event) => {
   let data = {};
   try {
     data = event.data ? event.data.json() : {};
@@ -92,123 +115,144 @@ self.addEventListener('push', event => {
     data = { title: 'BIOZAR', body: 'Nouvelle alerte BIOZAR' };
   }
 
-  const options = {
-    body: data.body || 'Un incident nécessite votre attention sur BIOZAR',
-    icon: data.icon || '/icons/icon-192x192.png',
-    badge: '/icons/icon-192x192.png',
-    tag: data.tag || 'biozar-push',
-    data: { incidentId: data.incidentId || null, url: data.url || '/' },
-    vibrate: [200, 100, 200, 100, 300],
-    requireInteraction: true,
-    actions: [
-      { action: 'open', title: '🔍 Voir' },
-      { action: 'close', title: '✕ Fermer' }
-    ]
-  };
-
   event.waitUntil(
-    self.registration.showNotification(data.title || '⚠️ BIOZAR - Alerte', options)
+    self.registration.showNotification(data.title || 'BIOZAR — Alerte', {
+      body: data.body || 'Un incident nécessite votre attention',
+      icon: data.icon || 'icons/icon-192x192.png',
+      badge: 'icons/icon-192x192.png',
+      tag: data.tag || 'biozar-push',
+      data: { incidentId: data.incidentId || null, url: data.url || './' },
+      vibrate: [200, 100, 200, 100, 300],
+      requireInteraction: true,
+      actions: [
+        { action: 'open', title: 'Voir' },
+        { action: 'close', title: 'Fermer' }
+      ]
+    })
   );
 });
 
-// ─── CLIC SUR NOTIFICATION ───
-self.addEventListener('notificationclick', event => {
+// ─── CLIC SUR NOTIFICATION ──────────────────────────────────────
+self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-
   if (event.action === 'close') return;
 
-  // Ouvrir ou focaliser la page BIOZAR
-  const urlToOpen = event.notification.data?.url || '/';
-  const incidentId = event.notification.data?.incidentId;
+  const urlToOpen = (event.notification.data && event.notification.data.url) || './';
+  const incidentId = event.notification.data && event.notification.data.incidentId;
 
   event.waitUntil(
     (async () => {
-      // Chercher une fenêtre BIOZAR déjà ouverte
-      const allClients = await clients.matchAll({
-        type: 'window',
-        includeUncontrolled: true
-      });
-
-      // Si une fenêtre existe, la focaliser
-      for (const client of allClients) {
+      const all = await clients.matchAll({ type: 'window', includeUncontrolled: true });
+      for (const client of all) {
         if (client.url.includes(self.location.origin)) {
           await client.focus();
-          // Envoyer un message pour naviguer vers la page production
-          if (incidentId) {
-            client.postMessage({ type: 'FOCUS_INCIDENT', incidentId });
-          }
+          if (incidentId) client.postMessage({ type: 'FOCUS_INCIDENT', incidentId });
           return;
         }
       }
-
-      // Sinon, ouvrir une nouvelle fenêtre
       await clients.openWindow(urlToOpen);
     })()
   );
 });
 
-// ─── STRATÉGIE DE CACHE ───
-self.addEventListener('fetch', event => {
-  const { request } = event;
-  const url = new URL(request.url);
+// ─── HELPERS ────────────────────────────────────────────────────
 
-  // ═══ FONTS GOOGLE : Cache First ───
-  if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
-    event.respondWith(cacheFirst(request, FONT_CACHE));
-    return;
-  }
+/** Network-first avec plafond de temps : hors-ligne, on ne bloque pas l'UI. */
+async function networkFirst(request, cacheName) {
+  const cached = caches.match(request);
 
+  const timedOut = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error('navigation-timeout')), NAVIGATION_TIMEOUT_MS)
+  );
 
-  // ═══ APP SHELL (HTML, JS, CSS, images locales) : Cache First ───
-  if (
-    url.origin === self.location.origin &&
-    (request.mode === 'navigate' ||
-     request.destination === 'style' ||
-     request.destination === 'script' ||
-     request.destination === 'font' ||
-     request.destination === 'image' ||
-     url.pathname.endsWith('.json'))
-  ) {
-    event.respondWith(cacheFirst(request, CACHE_NAME));
-    return;
-  }
-
-  // ═══ TOUT LE RESTE : Network First avec fallback cache ───
-  event.respondWith(networkFirst(request));
-});
-
-// ─── HELPER : Cache First ───
-async function cacheFirst(request, cacheName) {
-  const cached = await caches.match(request);
-  if (cached) return cached;
   try {
-    const response = await fetch(request);
-    if (response.ok) {
+    const response = await Promise.race([fetch(request), timedOut]);
+    if (response && response.ok) {
       const cache = await caches.open(cacheName);
       cache.put(request, response.clone());
     }
     return response;
   } catch (e) {
-    // Offline : retourne une réponse de fallback pour les navigations
-    if (request.mode === 'navigate') {
-      return caches.match('/index.html');
-    }
-    return new Response('Offline', { status: 503 });
+    return (await cached) || (await caches.match('index.html'));
   }
 }
 
-// ─── HELPER : Network First ───
-async function networkFirst(request) {
+/** Cache-first : réservé aux assets immuables, jamais aux données. */
+async function cacheFirst(request, cacheName) {
+  const cached = await caches.match(request);
+  if (cached) return cached;
+
   try {
     const response = await fetch(request);
+    if (response && response.ok) {
+      const cache = await caches.open(cacheName);
+      cache.put(request, response.clone());
+    }
     return response;
   } catch (e) {
-    const cached = await caches.match(request);
-    if (cached) return cached;
-    // Fallback pour les requêtes navigate
-    if (request.mode === 'navigate') {
-      return caches.match('/index.html');
-    }
-    return new Response('Offline', { status: 503 });
+    return new Response('Offline', { status: 503, statusText: 'Offline' });
   }
 }
+
+/** Network-only : les données métier ne passent JAMAIS par le cache. */
+async function networkOnly(request) {
+  try {
+    return await fetch(request);
+  } catch (e) {
+    return new Response(JSON.stringify({ error: 'offline' }), {
+      status: 503,
+      statusText: 'Offline',
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+}
+
+// ─── ROUTAGE ────────────────────────────────────────────────────
+self.addEventListener('fetch', (event) => {
+  const { request } = event;
+  if (request.method !== 'GET') return;
+
+  const url = new URL(request.url);
+
+  // ── Données métier Supabase : jamais de cache. Une donnée périmée
+  //    affichée comme fraîche est pire qu'une erreur explicite.
+  if (url.hostname.endsWith('.supabase.co')) {
+    event.respondWith(networkOnly(request));
+    return;
+  }
+
+  // ── Origines tierces restantes : on ne s'en occupe pas.
+  if (url.origin !== self.location.origin) return;
+
+  // ── Configuration Cloudflare : toujours fraîche.
+  if (url.pathname.startsWith('/api/')) {
+    event.respondWith(networkOnly(request));
+    return;
+  }
+
+  // ── Métadonnées de version : toujours fraîches (détection de MAJ).
+  if (url.pathname.endsWith('/version.json') || url.pathname.endsWith('/manifest.json')) {
+    event.respondWith(networkOnly(request));
+    return;
+  }
+
+  // ── Assets immuables : cache-first.
+  if (
+    url.pathname.startsWith('/fonts/') ||
+    url.pathname.startsWith('/vendor/') ||
+    url.pathname.startsWith('/icons/') ||
+    url.pathname.endsWith('/chart.js')
+  ) {
+    event.respondWith(cacheFirst(request, CACHE_ASSETS));
+    return;
+  }
+
+  // ── Navigation : network-first pour que les mises à jour passent.
+  if (request.mode === 'navigate') {
+    event.respondWith(networkFirst(request, CACHE_SHELL));
+    return;
+  }
+
+  // ── Le reste (css/js inline éventuels) : network-first.
+  event.respondWith(networkFirst(request, CACHE_SHELL));
+});

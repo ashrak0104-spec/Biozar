@@ -1,12 +1,22 @@
 {
   "private": true,
   "name": "biozar",
-  "version": "1.1.0",
-  "description": "BIOZAR – Console de Pilotage (100% gratuit, Cloudflare + Supabase)",
+  "version": "1.2.0",
+  "description": "BIOZAR – Console de Pilotage semi-offline (APK Android + EXE Windows + PWA)",
   "scripts": {
-    "dev": "npx serve .",
-    "android": "npm --prefix biozar-app run android",
-    "lint": "npm --prefix functions run lint && npm --prefix ai run lint"
+    "test": "node --test --test-reporter=spec tests/sync.test.mjs tests/network.test.mjs tests/bridge.test.mjs tests/bootstrap.test.mjs",
+    "gen:sql": "node scripts/gen-sql.mjs",
+    "verify": "node scripts/verify.mjs",
+    "web": "npx serve biozar/web",
+    "copy-web": "npm --prefix biozar-app run copy-web",
+    "android:add": "npm --prefix biozar-app run add-android",
+    "android:open": "npm --prefix biozar-app run android",
+    "android:sync": "npm --prefix biozar-app run sync",
+    "android:build": "npm --prefix biozar-app run build",
+    "desktop:dev": "npm --prefix desktop run tauri dev",
+    "desktop:build": "npm --prefix desktop run tauri build",
+    "desktop:icons": "npm --prefix desktop run tauri icon biozar/logo BIOZAR.png",
+    "gen:server-sql": "node scripts/gen-server-sql.mjs"
   },
   "browserslist": [
     "last 2 versions",
@@ -15,5 +25,6 @@
   "dependencies": {
     "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.108.2"
-  }
+  },
+  "type": "module"
 }

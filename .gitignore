@@ -33,3 +33,16 @@ ai/node_modules/
 # Modules locaux
 biozar-app/src/dataconnect-generated/
 biozar-app/www/firebase-init.js
+
+# ── Secrets & artefacts de build (ne JAMAIS committer) ──
+*.keystore
+*.jks
+keystore-b64.txt
+*.apk
+*.aab
+biozar-app/android/app/biozar-release.keystore
+
+desktop/src-tauri/icons/ios/
+desktop/src-tauri/icons/android/
+desktop/src-tauri/gen/
+desktop/src-tauri/target/
