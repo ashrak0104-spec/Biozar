@@ -172,16 +172,30 @@ function attachPlatformSignals(monitor, env = {}) {
   }
 
   // ── Navigateur ──
+  // Dégradé volontairement tolérant : cette branche s'exécute aussi dans les
+  // WebView Android et Tauri, où `window` existe. Si l'une de ces APIs
+  // manque, on ignore le signal navigateur plutôt que de faire échouer tout
+  // le démarrage — les autres signaux (greffon natif, sonde) suffisent.
   if (typeof window !== 'undefined') {
-    monitor.setConnectivity('browser', navigator.onLine !== false);
-    const on = () => monitor.setConnectivity('browser', true);
-    const off = () => monitor.setConnectivity('browser', false);
-    window.addEventListener('online', on);
-    window.addEventListener('offline', off);
-    cleanups.push(() => {
-      window.removeEventListener('online', on);
-      window.removeEventListener('offline', off);
-    });
+    const nav = typeof navigator !== 'undefined' ? navigator : null;
+    const canListen =
+      typeof window.addEventListener === 'function' &&
+      typeof window.removeEventListener === 'function';
+
+    if (nav && typeof nav.onLine !== 'undefined') {
+      monitor.setConnectivity('browser', nav.onLine !== false);
+    }
+
+    if (canListen) {
+      const on = () => monitor.setConnectivity('browser', true);
+      const off = () => monitor.setConnectivity('browser', false);
+      window.addEventListener('online', on);
+      window.addEventListener('offline', off);
+      cleanups.push(() => {
+        window.removeEventListener('online', on);
+        window.removeEventListener('offline', off);
+      });
+    }
   }
 
   // ── Sonde active ──

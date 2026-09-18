@@ -295,6 +295,56 @@ describe('chaîne complète : détection de plateforme → adaptateur', () => {
   });
 });
 
+describe('bootstrap() sans adaptateur injecté — le vrai chemin de démarrage', () => {
+  // Tous les tests existants de bootstrap() injectent
+  // `adapter: new NodeAdapter(':memory:')`, ce qui court-circuite
+  // createAdapter(). C'est exactement ce qui a masqué le défaut de bare
+  // specifier : le point d'entrée réel n'avait jamais été exécuté.
+
+  test('bootstrap() démarre sur Tauri sans adaptateur fourni', async () => {
+    const bridge = fakeTauriBridge();
+    globalThis.window = {
+      __TAURI_INTERNALS__: {},
+      __TAURI__: { core: { invoke: bridge.invoke } }
+    };
+
+    const { bootstrap } = await import('../biozar/web/core/index.js');
+    const app = await bootstrap({ transport: { async push() { return { ok: true }; } } });
+
+    assert.equal(app.platform, 'tauri');
+    assert.ok(app.db, 'la base doit être ouverte');
+    assert.ok(bridge.calls.some((c) => c.cmd === 'plugin:sql|load'));
+
+    await app.db.upsert('clients', { nom: 'Hôtel Royal', statut: 'Abonné' });
+    assert.equal((await app.db.findAll('clients')).length, 1);
+
+    await app.db.close();
+  });
+
+  test('bootstrap() démarre sur Android sans adaptateur fourni', async () => {
+    const plugin = fakeCapacitorPlugin();
+    globalThis.window = {
+      Capacitor: {
+        isNativePlatform: () => true,
+        Plugins: { CapacitorSQLite: plugin }
+      }
+    };
+
+    const { bootstrap } = await import('../biozar/web/core/index.js');
+    const app = await bootstrap({ transport: { async push() { return { ok: true }; } } });
+
+    assert.equal(app.platform, 'android');
+    assert.ok(app.db, 'la base doit être ouverte');
+
+    await app.db.upsert('productions', { date: '2026-09-18', name: 'Tomate', qty: 12 });
+    const rows = await app.db.findAll('productions');
+    assert.equal(rows.length, 1);
+    assert.equal(Number(rows[0].qty), 12);
+
+    await app.db.close();
+  });
+});
+
 describe('aucun bare specifier dans le socle', () => {
   test('core/ ne contient que des imports relatifs avec extension', async () => {
     const fs = await import('node:fs');
