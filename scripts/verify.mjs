@@ -357,6 +357,32 @@ check('coque Tauri : permissions et cohérence', () => {
   return `${cap.permissions.length} permissions valides, base migrée, trait Manager importé`;
 });
 
+check('le chemin legacy Supabase est lui aussi authentifié', () => {
+  // La migration 002 soumet biozar_state à auth.uid(). Le client historique
+  // n'envoyait que la clé anonyme : ses écritures échouaient silencieusement.
+  const init = read('supabase-init.js');
+  assert(
+    /function currentAccessToken\(\)/.test(init),
+    'supabase-init.js doit savoir résoudre le jeton de session'
+  );
+  assert(
+    /headers\.Authorization = `Bearer \$\{token\}`/.test(init),
+    'supabaseFetch doit envoyer l’en-tête Authorization'
+  );
+  assert(
+    /__biozarAccessToken/.test(init),
+    'une source de jeton indépendante de l’ordre de chargement est requise'
+  );
+
+  const wiring = fs.readFileSync(path.join(WEB, 'core', 'wiring.js'), 'utf8');
+  assert(
+    /host\.__biozarAccessToken = token/.test(wiring) &&
+      /delete host\.__biozarAccessToken/.test(wiring),
+    'le socle doit publier le jeton et le retirer à la déconnexion'
+  );
+  return 'jeton repris sur les deux chemins, retiré à la déconnexion';
+});
+
 // ── 7. Aucun secret versionné ──
 check('aucun secret ni binaire de build versionné', () => {
   const tracked = execSync('git ls-files', { cwd: ROOT, encoding: 'utf8' }).split('\n');

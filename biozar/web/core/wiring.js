@@ -62,6 +62,16 @@ async function install(opts) {
     const s = opts.getState();
     const token = s && s.currentUser ? s.currentUser.accessToken : null;
     app.setAccessToken(token || null);
+
+    // Publié aussi pour le chemin legacy (supabase-init.js) : depuis la
+    // migration 002, ses écritures vers biozar_state exigent un utilisateur
+    // authentifié, et ce script s'exécute avant la déclaration de `state`.
+    const host = typeof window !== 'undefined' ? window : null;
+    if (host) {
+      if (token) host.__biozarAccessToken = token;
+      else delete host.__biozarAccessToken;
+    }
+
     return Boolean(token);
   }
 

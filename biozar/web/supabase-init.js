@@ -77,6 +77,34 @@ function isConfigured() {
       && !supabaseConfig.anonKey.includes('votre-cle');
 }
 
+/**
+ * Jeton d'accès de la session courante.
+ *
+ * Depuis la migration 002, les politiques RLS de biozar_state exigent
+ * `auth.uid() IS NOT NULL`. Sans en-tête Authorization, les écritures du
+ * miroir legacy échouent SILENCIEUSEMENT : supabaseFetch avale l'erreur et
+ * renvoie null, l'app croit avoir sauvegardé.
+ *
+ * Résolu à l'appel et non au chargement : ce script s'exécute avant la
+ * déclaration de `state` dans index.html.
+ */
+function currentAccessToken() {
+  // Source explicite, posée par le socle (core/wiring.js) : indépendante de
+  // l'ordre de chargement des scripts.
+  if (typeof window !== 'undefined' && window.__biozarAccessToken) {
+    return window.__biozarAccessToken;
+  }
+  // Repli : la session en cours dans l'état global.
+  try {
+    if (typeof state !== 'undefined' && state && state.currentUser) {
+      return state.currentUser.accessToken || null;
+    }
+  } catch (e) {
+    /* `state` pas encore initialisé : appel trop tôt, pas de jeton */
+  }
+  return null;
+}
+
 async function supabaseFetch(path, options = {}) {
   if (!isConfigured()) return null;
   const url = `${SUPABASE_REST(supabaseConfig.url)}${path}`;
@@ -86,6 +114,12 @@ async function supabaseFetch(path, options = {}) {
     'Accept': 'application/json',
     ...options.headers
   };
+  // La clé anon seule ne suffit plus : les politiques RLS exigent un
+  // utilisateur authentifié.
+  const token = currentAccessToken();
+  if (token && !headers.Authorization) {
+    headers.Authorization = `Bearer ${token}`;
+  }
   try {
     const res = await fetch(url, { ...options, headers });
     if (!res.ok) {

@@ -8,14 +8,14 @@
 ## 1. Commandes
 
 ```bash
-npm test                # 101 tests, ~7 s
+npm test                # 107 tests, ~9 s
 npm run verify          # 16 contrôles d'intégrité du paquet semi-offline
 npm run gen:sql         # régénère le schéma SQLite consommé par Tauri
 npm run gen:server-sql  # régénère la migration PostgreSQL/Supabase
 npm run copy-web        # biozar/web → biozar-app/www
 ```
 
-**État vérifié :** `101 pass / 0 fail`, `21 contrôles réussis`, codes de sortie 0.
+**État vérifié :** `107 pass / 0 fail`, `22 contrôles réussis`, codes de sortie 0.
 
 ---
 
@@ -53,6 +53,12 @@ npm run copy-web        # biozar/web → biozar-app/www
 - **Le Service Worker ne préchargeait pas le socle** : `PRECACHE_ASSETS` datait d'avant l'existence de `core/`. Les 10 modules n'étaient ni préchargés ni routés — l'application n'aurait pas démarré hors-ligne au premier lancement, ce qui est précisément la promesse du produit. Ils sont maintenant préchargés (cache passé en `biozar-v5` pour invalider l'ancien).
 - **Le repli hors-ligne renvoyait du HTML pour un module** : `networkFirst()` retombait sur `index.html` pour *toute* requête en échec. Pour un `import` ES, cela produit une erreur de type MIME opaque, bien plus difficile à diagnostiquer qu'un 503 explicite. Le repli est désormais réservé aux navigations.
 - **Les déclencheurs de synchro ne s'exécutaient jamais** : ils étaient posés dans un `initCloudMonitor()` remplacé, mais le socle est chargé en module `deferred` — il s'exécute donc **après** le script inline de démarrage qui a déjà appelé `initCloudMonitor()`. Remplacer la fonction à ce stade ne servait à rien. Les écouteurs `online` / `visibilitychange` sont maintenant posés directement à l'installation.
+- **Le chemin legacy aurait perdu la synchro cloud** : la migration 002 soumet
+  `biozar_state` à `auth.uid()`, mais `supabase-init.js` n'envoyait que la clé
+  anonyme. Ses écritures auraient échoué **silencieusement** — `supabaseFetch`
+  avale l'erreur et renvoie `null`, l'app croyant avoir sauvegardé. Le jeton est
+  maintenant résolu à l'appel (`window.__biozarAccessToken`, publié par le socle,
+  avec repli sur la session en cours) et joint à l'en-tête `Authorization`.
 - **`lib.rs` ne compilait pas** : `app.get_webview_window("main")` vient du trait
   `tauri::Manager`, qui n'était pas importé. Erreur de compilation certaine au
   `cargo build`, invisible ici puisque Rust n'est pas installable. Trouvée en
@@ -95,7 +101,7 @@ nativement (`<script type="module">`). Contrainte vérifiée automatiquement : *
 relatif doit porter l'extension `.js`**, sinon l'échec n'apparaît que dans la WebView,
 sur le terrain.
 
-### Ce que les 101 tests prouvent
+### Ce que les 107 tests prouvent
 
 | Test | Code réellement exécuté |
 |---|---|
