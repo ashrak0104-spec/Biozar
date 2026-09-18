@@ -49,12 +49,29 @@ function read(file) {
 
 // ── 1. La copie Capacitor doit être strictement identique à la source ──
 check('source web ↔ copie Capacitor identiques', () => {
+  // La comparaison MD5 portait sur 6 fichiers racine seulement : aucun
+  // core/*.js. Le socle entier pouvait donc diverger de la copie livrée
+  // dans l'APK sans qu'aucun contrôle ne le voie. On compare désormais
+  // tout ce que copy-web transporte.
   const files = ['index.html', 'sw.js', 'supabase-init.js', 'manifest.json', 'version.json', 'chart.js'];
-  const drifted = files.filter(
-    (f) => fs.existsSync(path.join(WWW, f)) && md5(path.join(WEB, f)) !== md5(path.join(WWW, f))
-  );
+
+  for (const dir of ['core', 'vendor']) {
+    const src = path.join(WEB, dir);
+    if (!fs.existsSync(src)) continue;
+    for (const f of fs.readdirSync(src)) {
+      files.push(`${dir}/${f}`);
+    }
+  }
+
+  // Un fichier présent dans la source mais absent du paquet est une dérive
+  // plus grave encore qu'une différence de contenu : il manquerait à l'APK.
+  const missing = files.filter((f) => !fs.existsSync(path.join(WWW, f)));
+  assert(missing.length === 0, `absents de biozar-app/www : ${missing.join(', ')}`);
+
+  const drifted = files.filter((f) => md5(path.join(WEB, f)) !== md5(path.join(WWW, f)));
   assert(drifted.length === 0, `dérive détectée : ${drifted.join(', ')} — lancer npm run copy-web`);
-  return `${files.length} fichiers en phase`;
+
+  return `${files.length} fichiers en phase (racine, core/ et vendor/)`;
 });
 
 check('polices et libs vendorisées présentes dans le paquet', () => {
