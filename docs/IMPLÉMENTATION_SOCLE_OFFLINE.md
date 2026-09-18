@@ -15,7 +15,7 @@ npm run gen:server-sql  # régénère la migration PostgreSQL/Supabase
 npm run copy-web        # biozar/web → biozar-app/www
 ```
 
-**État vérifié :** `61 pass / 0 fail`, `19 contrôles réussis`, codes de sortie 0.
+**État vérifié :** `61 pass / 0 fail`, `20 contrôles réussis`, codes de sortie 0.
 
 ---
 
@@ -50,6 +50,8 @@ npm run copy-web        # biozar/web → biozar-app/www
   bloc `release`** (celui de `signingConfigs`, pas celui de `buildTypes`) — l'APK serait
   resté non signé sans erreur. Corrigé et re-vérifié structurellement.
 - **Le jeton d'authentification n'atteignait pas la synchro** : les politiques RLS de la migration 002 exigent `auth.uid()`, mais le câblage ne transmettait que la clé anonyme. Chaque requête aurait renvoyé 401 — et la file d'attente ne se serait jamais vidée, sans message d'erreur. Le jeton vit dans `state.currentUser.accessToken`, donc il n'existe qu'**après** la connexion : le transport a maintenant un `setAccessToken()`, rafraîchi avant chaque cycle.
+- **Le Service Worker ne préchargeait pas le socle** : `PRECACHE_ASSETS` datait d'avant l'existence de `core/`. Les 10 modules n'étaient ni préchargés ni routés — l'application n'aurait pas démarré hors-ligne au premier lancement, ce qui est précisément la promesse du produit. Ils sont maintenant préchargés (cache passé en `biozar-v5` pour invalider l'ancien).
+- **Le repli hors-ligne renvoyait du HTML pour un module** : `networkFirst()` retombait sur `index.html` pour *toute* requête en échec. Pour un `import` ES, cela produit une erreur de type MIME opaque, bien plus difficile à diagnostiquer qu'un 503 explicite. Le repli est désormais réservé aux navigations.
 - **Les déclencheurs de synchro ne s'exécutaient jamais** : ils étaient posés dans un `initCloudMonitor()` remplacé, mais le socle est chargé en module `deferred` — il s'exécute donc **après** le script inline de démarrage qui a déjà appelé `initCloudMonitor()`. Remplacer la fonction à ce stade ne servait à rien. Les écouteurs `online` / `visibilitychange` sont maintenant posés directement à l'installation.
 - **Schéma décalé des données réelles** : `commandes` et `factures` étaient modélisées
   avec des noms inventés (`produit`, `montant`, `numero`, `lignes`) alors que l'app écrit

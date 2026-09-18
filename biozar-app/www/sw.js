@@ -13,7 +13,7 @@
    plus aucune mise à jour. C'est corrigé.
    ═══════════════════════════════════════════════════════════════ */
 
-const CACHE_VERSION = 'biozar-v4';
+const CACHE_VERSION = 'biozar-v5';
 const CACHE_SHELL = `${CACHE_VERSION}-shell`;
 const CACHE_ASSETS = `${CACHE_VERSION}-assets`;
 
@@ -37,7 +37,18 @@ const PRECACHE_ASSETS = [
   'icons/icon-512x512-maskable.png',
   'icons/icon-192x192-maskable.png',
   'icons/logo-biozar.png',
-  'icons/logo-biozar-alt.png'
+  'icons/logo-biozar-alt.png',
+  // Socle semi-offline : indispensable au démarrage, même sans réseau.
+  'core/index.js',
+  'core/schema.js',
+  'core/db.js',
+  'core/sync-engine.js',
+  'core/net.js',
+  'core/transport-supabase.js',
+  'core/migration.js',
+  'core/bridge.js',
+  'core/sync-status.js',
+  'core/wiring.js'
 ];
 
 // ─── INSTALLATION ───────────────────────────────────────────────
@@ -173,7 +184,12 @@ async function networkFirst(request, cacheName) {
     }
     return response;
   } catch (e) {
-    return (await cached) || (await caches.match('index.html'));
+    if (cached) return cached;
+    // Le repli sur index.html ne vaut que pour une navigation : renvoyer du
+    // HTML en réponse à une requête de module provoque une erreur de type
+    // MIME opaque, bien plus difficile à diagnostiquer qu'un 503 explicite.
+    if (request.mode === 'navigate') return caches.match('index.html');
+    return new Response('Offline', { status: 503, statusText: 'Offline' });
   }
 }
 

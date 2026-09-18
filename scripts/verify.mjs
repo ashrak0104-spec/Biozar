@@ -227,6 +227,37 @@ check('pas d’animation de translation au changement d’onglet', () => {
   return 'fondu 120 ms, aucune translation';
 });
 
+check('le Service Worker précharge tout le socle', () => {
+  const sw = read('sw.js');
+  const precached = new Set(
+    [...sw.matchAll(/^\s*'([^']+)'/gm)].map((m) => m[1]).filter((p) => !p.startsWith('http'))
+  );
+
+  const modules = fs
+    .readdirSync(path.join(WEB, 'core'))
+    .filter((f) => f.endsWith('.js'))
+    .map((f) => `core/${f}`);
+
+  const missing = modules.filter((m) => !precached.has(m));
+  assert(
+    missing.length === 0,
+    `absents du précache (l'app ne démarrera pas hors-ligne) : ${missing.join(', ')}`
+  );
+
+  // Un fichier préchargé qui n'existe pas fait échouer l'installation du SW.
+  const ghost = [...precached].filter(
+    (p) => p.startsWith('core/') && !fs.existsSync(path.join(WEB, p))
+  );
+  assert(ghost.length === 0, `préchargés mais inexistants : ${ghost.join(', ')}`);
+
+  assert(
+    /if \(request\.mode === 'navigate'\) return caches\.match\('index\.html'\)/.test(sw),
+    'le repli sur index.html doit être réservé aux navigations, pas aux modules'
+  );
+
+  return `${modules.length} modules préchargés, repli réservé aux navigations`;
+});
+
 check('le jeton d’authentification atteint le transport', () => {
   // Depuis la migration 002, les politiques RLS exigent auth.uid(). Sans
   // jeton, chaque requête renvoie 401 et la file ne se vide jamais.
