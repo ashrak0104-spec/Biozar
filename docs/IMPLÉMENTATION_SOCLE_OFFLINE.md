@@ -15,7 +15,7 @@ npm run gen:server-sql  # régénère la migration PostgreSQL/Supabase
 npm run copy-web        # biozar/web → biozar-app/www
 ```
 
-**État vérifié :** `125 pass / 0 fail`, `26 contrôles réussis`, codes de sortie 0.
+**État vérifié :** `135 pass / 0 fail`, `27 contrôles réussis`, codes de sortie 0.
 
 ---
 
@@ -199,12 +199,69 @@ serveur. Trois tests verrouillent ce comportement.
 
 ---
 
-## 7. Durcissement de l'authentification (fait)
+## 7. Le socle ne démarrait sur aucune des deux plateformes (corrigé)
+
+Trois chemins de démarrage importaient des paquets npm par leur nom —
+`import('@capacitor-community/sqlite')`, `import('@tauri-apps/plugin-sql')` et
+`import('@capacitor/network')`.
+
+Or **l'application n'a pas de bundler** : les modules sont chargés directement
+par la WebView. Une WebView ne sait pas résoudre un *bare specifier* — il faut
+un chemin relatif, un import map ou un bundler. Conséquence : sur Android comme
+sur Windows, `createAdapter()` rejetait immédiatement, et le socle ne
+démarrait jamais. Les deux formats de livraison étaient concernés.
+
+Ce défaut n'apparaissait ni à l'œil ni dans les tests existants : les
+adaptateurs étaient testés avec des *handles* construits à la main, sans passer
+par `createAdapter()`.
+
+### Corrections
+
+| Plateforme | Avant | Après |
+|---|---|---|
+| Android | `import('@capacitor-community/sqlite')` | module **vendorisé** (`vendor/capacitor-sqlite.js`) + greffon résolu depuis `window.Capacitor.Plugins.CapacitorSQLite` |
+| Windows | `import('@tauri-apps/plugin-sql')` | shim de 5 méthodes au-dessus de `window.__TAURI__.core.invoke`, exposé par `withGlobalTauri: true` |
+| Réseau | `import('@capacitor/network')` | `window.Capacitor.Plugins.Network` |
+
+Le module SQLite a pu être vendorisé tel quel : son `definitions.js`
+(29 Ko, où vivent `SQLiteConnection` et `SQLiteDBConnection`) n'a
+**aucun import actif**. Vérifié en le chargeant seul.
+
+Le greffon Tauri, lui, n'est qu'une fine couche autour de `invoke` : le
+shim reproduit `load`, `execute`, `select` et `close` à
+l'identique, d'après la source du paquet.
+
+### Un second défaut, révélé par le test
+
+`isConnection()` du greffon SQLite renvoie `{ result: boolean }`, pas
+un booléen. Le code faisait :
+
+```js
+if (!(await conn.isConnection(dbName, false))) { … créer la connexion … }
+```
+
+`!objet` vaut toujours `false` : la connexion n'était **jamais** créée, et
+`retrieveConnection()` échouait aussitôt après. Corrigé en testant
+`existing.result !== true`.
+
+### Vérification
+
+`tests/platform.test.mjs` — **10 tests**. Les faux greffons sont adossés à
+un vrai SQLite en mémoire, donc le chemin complet est exercé : chargement du
+module → création de connexion → `Db.open()` → écriture → relecture →
+`countPending()`. Un dixième test interdit tout bare specifier dans
+`core/`, et un contrôle d'intégrité en fait autant de façon permanente.
+
+`@capacitor-community/sqlite` a été ajouté aux dépendances de
+`biozar-app` : sans lui, Capacitor n'auto-lie pas le code natif dans l'APK
+et `window.Capacitor.Plugins.CapacitorSQLite` n'existe pas.
+
+## 8. Durcissement de l'authentification (fait)
 
 Trois failles distinctes, toutes sur le chemin hors-ligne — c'est-à-dire le
 mode **principal** de l'application.
 
-### 7.1 Identifiants embarqués dans le code livré
+### 8.1 Identifiants embarqués dans le code livré
 
 `index.html` contenait sept comptes avec un SHA-256 **non salé** en dur. Le
 fichier est livré dans l'APK : quiconque pouvait extraire les hachages et les
@@ -221,7 +278,7 @@ livré dans le code.
 déjà authentifié **en ligne** sur cet appareil. L'enrôlement est la seule porte
 d'entrée.
 
-### 7.2 Mot de passe en clair et jeton dans le blob cloud
+### 8.2 Mot de passe en clair et jeton dans le blob cloud
 
 `doLoginAsync()` plaçait `password: pass` — le mot de passe **en clair** — dans
 `state.currentUser`, et `saveState()` retirait `s.password` mais pas
@@ -237,7 +294,7 @@ Désormais : le mot de passe ne quitte plus la fonction de connexion ; le jeton
 reste en `localStorage` (continuité de session) mais est retiré de la copie
 cloud.
 
-### 7.3 Un changement de mot de passe qui ne changeait rien
+### 8.3 Un changement de mot de passe qui ne changeait rien
 
 `changePassword()` hachait en SHA-256 non salé, écrivait le résultat dans
 l'annuaire local et affichait **« Mot de passe changé ! »** sans jamais
@@ -249,7 +306,7 @@ l'erreur du serveur est affichée — plus de faux succès. Même correction pou
 `addUserAsync()`, qui annonçait « Utilisateur ajouté » même quand la création
 Supabase avait échoué.
 
-### 7.4 Un mot de passe versionné, partagé entre le keystore et l'admin
+### 8.4 Un mot de passe versionné, partagé entre le keystore et l'admin
 
 Un même mot de passe était en clair dans six fichiers suivis par Git — mot de
 passe du keystore de signature Android (`capacitor.config.json`,
@@ -294,7 +351,7 @@ déployer sur des appareils de terrain.
 
 ---
 
-## 8. Passe de sobriété UI (faite)
+## 9. Passe de sobriété UI (faite)
 
 `scripts/ui-sobriete.mjs` applique 28 ajustements, vérifiés par les contrôles
 verify n° 16 et 17 :
@@ -317,7 +374,7 @@ doivent se valider à l'œil, dans un navigateur — pas par un script.
 
 ---
 
-## 9. Ordre proposé pour la suite
+## 10. Ordre proposé pour la suite
 
 1. **Ouvrir l'app et regarder la console.** `window.__biozarOffline` doit valoir
    `{ available: true, platform: 'android' | 'tauri' }`. Si `available: false`, le message

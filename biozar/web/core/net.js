@@ -148,18 +148,27 @@ function attachPlatformSignals(monitor, env = {}) {
   // ── Android (Capacitor) ──
   const capacitor = env.Capacitor || (typeof window !== 'undefined' ? window.Capacitor : null);
   if (capacitor && capacitor.isNativePlatform && capacitor.isNativePlatform()) {
-    // Le plugin est chargé à la demande : son absence ne doit pas casser l'app.
-    import('@capacitor/network')
-      .then(({ Network }) => {
-        Network.getStatus().then((s) => monitor.setConnectivity('native', !!s.connected));
-        const sub = Network.addListener('networkStatusChange', (s) =>
+    // Le greffon se résout depuis le pont natif, jamais par import :
+    // `@capacitor/network` est un bare specifier qu'une WebView sans
+    // bundler ne sait pas résoudre.
+    const network = capacitor.Plugins && capacitor.Plugins.Network;
+    if (network) {
+      Promise.resolve()
+        .then(() => network.getStatus())
+        .then((s) => monitor.setConnectivity('native', !!s.connected))
+        .catch(() => {
+          /* greffon inopérant : la sonde prend le relais */
+        });
+
+      try {
+        const sub = network.addListener('networkStatusChange', (s) =>
           monitor.setConnectivity('native', !!s.connected)
         );
-        cleanups.push(() => sub.then((h) => h.remove()));
-      })
-      .catch(() => {
-        /* plugin absent : la sonde prend le relais */
-      });
+        cleanups.push(() => Promise.resolve(sub).then((h) => h && h.remove()));
+      } catch (_) {
+        /* pas d'écoute possible : la sonde suffit */
+      }
+    }
   }
 
   // ── Navigateur ──

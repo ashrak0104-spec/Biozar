@@ -25,6 +25,8 @@ const PRECACHE_ASSETS = [
   'supabase-init.js',
   'vendor/html2canvas.min.js',
   'vendor/jspdf.umd.min.js',
+  // Socle SQLite Android : chargé dynamiquement par core/index.js.
+  'vendor/capacitor-sqlite.js',
   'fonts/inter-300.woff2',
   'fonts/inter-400.woff2',
   'fonts/inter-500.woff2',

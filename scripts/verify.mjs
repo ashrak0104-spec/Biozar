@@ -517,6 +517,52 @@ check('configuration Capacitor cohérente pour l’APK', () => {
   return `appId ${conf.appId}, webDir ${conf.webDir} complet, androidScheme https`;
 });
 
+check('aucun bare specifier dans le socle (WebView sans bundler)', () => {
+  // L'application n'a pas de bundler : une WebView ne sait pas résoudre
+  // `import 'nom-de-paquet'`. Trois chemins en dépendaient et auraient
+  // empêché tout démarrage sur APK comme sur EXE. Les greffons se résolvent
+  // désormais depuis le pont natif, et le module SQLite est vendorisé.
+  const dir = path.join(WEB, 'core');
+  const offenders = [];
+
+  for (const file of fs.readdirSync(dir).filter((f) => f.endsWith('.js'))) {
+    const src = fs.readFileSync(path.join(dir, file), 'utf8');
+
+    for (const m of src.matchAll(/(?:^|\s)import\s+[^;]*?from\s+['"]([^'"]+)['"]/gs)) {
+      if (!m[1].startsWith('.') && !m[1].startsWith('node:')) offenders.push(`${file} → ${m[1]}`);
+    }
+    for (const m of src.matchAll(/import\(\s*['"]([^'"]+)['"]\s*\)/g)) {
+      if (!m[1].startsWith('.') && !m[1].startsWith('node:')) {
+        offenders.push(`${file} → import(${m[1]})`);
+      }
+    }
+  }
+
+  assert(offenders.length === 0, `imports non résolubles : ${offenders.join(', ')}`);
+
+  // Le module SQLite vendorisé doit rester autonome.
+  const vendored = path.join(WEB, 'vendor', 'capacitor-sqlite.js');
+  assert(fs.existsSync(vendored), 'vendor/capacitor-sqlite.js absent');
+  const vsrc = fs.readFileSync(vendored, 'utf8');
+  const activeImports = vsrc
+    .split('\n')
+    .filter((l) => !l.trimStart().startsWith('//'))
+    .filter((l) => /^\s*import\s|^\s*export\s+[^;]*from\s/.test(l));
+  assert(activeImports.length === 0, `module vendorisé non autonome : ${activeImports.join(' | ')}`);
+
+  // Et il doit être déclaré comme dépendance, sinon le code natif SQLite
+  // n'est pas auto-lié dans l'APK.
+  const appPkg = JSON.parse(
+    fs.readFileSync(path.join(ROOT, 'biozar-app', 'package.json'), 'utf8')
+  );
+  assert(
+    appPkg.dependencies && appPkg.dependencies['@capacitor-community/sqlite'],
+    '@capacitor-community/sqlite doit être une dépendance de biozar-app'
+  );
+
+  return '11 modules sans bare specifier, SQLite vendorisé et déclaré';
+});
+
 // ── 7. Aucun secret versionné ──
 check('aucun secret ni binaire de build versionné', () => {
   const tracked = execSync('git ls-files', { cwd: ROOT, encoding: 'utf8' }).split('\n');

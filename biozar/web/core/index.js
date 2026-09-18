@@ -36,6 +36,56 @@ function detectPlatform(win = typeof window !== 'undefined' ? window : {}) {
 }
 
 /**
+ * Shim du greffon Tauri `plugin-sql`, adossé à `window.__TAURI__.core.invoke`.
+ *
+ * Pourquoi ne pas importer `@tauri-apps/plugin-sql` ? Son module ESM importe
+ * `@tauri-apps/api/core` — un bare specifier qu'aucune WebView ne sait
+ * résoudre sans bundler. Or l'application n'en a pas.
+ *
+ * `withGlobalTauri: true` (tauri.conf.json) expose `window.__TAURI__`, dont
+ * `core.invoke`. Le greffon officiel n'est lui-même qu'une fine couche de
+ * cinq méthodes au-dessus de cet `invoke` ; on la reproduit à l'identique.
+ */
+function tauriDatabaseClass() {
+  const tauri = typeof window !== 'undefined' ? window.__TAURI__ : null;
+  const invoke = tauri && tauri.core && tauri.core.invoke;
+  if (typeof invoke !== 'function') {
+    throw new Error(
+      'BIOZAR : window.__TAURI__.core.invoke indisponible. ' +
+        'Vérifiez withGlobalTauri: true dans tauri.conf.json.'
+    );
+  }
+
+  return class TauriDatabase {
+    constructor(path) {
+      this.path = path;
+    }
+    static async load(path) {
+      const resolved = await invoke('plugin:sql|load', { db: path });
+      return new TauriDatabase(resolved);
+    }
+    async execute(query, bindValues) {
+      const [rowsAffected, lastInsertId] = await invoke('plugin:sql|execute', {
+        db: this.path,
+        query,
+        values: bindValues ?? []
+      });
+      return { lastInsertId, rowsAffected };
+    }
+    async select(query, bindValues) {
+      return invoke('plugin:sql|select', {
+        db: this.path,
+        query,
+        values: bindValues ?? []
+      });
+    }
+    async close(db) {
+      return invoke('plugin:sql|close', { db });
+    }
+  };
+}
+
+/**
  * Construit l'adaptateur SQL adapté à la plateforme.
  *
  * @param {'android'|'tauri'|'browser'|'node'} platform
@@ -49,15 +99,36 @@ async function createAdapter(platform, opts = {}) {
       return new NodeAdapter(opts.dbName || ':memory:');
 
     case 'android': {
-      const { CapacitorSQLite, SQLiteConnection } = await import('@capacitor-community/sqlite');
-      const conn = new SQLiteConnection(CapacitorSQLite);
-      if (!(await conn.isConnection(dbName, false))) await conn.createConnection(dbName, false, 'no-encryption', 1, false);
+      // Le greffon est vendorisé : son module officiel importe
+      // @capacitor/core en bare specifier, inutilisable sans bundler.
+      // Le fichier vendorisé, lui, n'a aucun import actif.
+      const { SQLiteConnection } = await import('../vendor/capacitor-sqlite.js');
+
+      // L'instance du greffon vient du pont natif, pas d'un import.
+      const capacitor = typeof window !== 'undefined' ? window.Capacitor : null;
+      const plugin = capacitor && capacitor.Plugins && capacitor.Plugins.CapacitorSQLite;
+      if (!plugin) {
+        throw new Error(
+          'BIOZAR : greffon CapacitorSQLite introuvable. ' +
+            '@capacitor-community/sqlite doit figurer dans les dépendances de biozar-app.'
+        );
+      }
+
+      const conn = new SQLiteConnection(plugin);
+
+      // isConnection renvoie { result: boolean }, pas un booléen. Tester
+      // `!(await …)` sur l'objet serait toujours faux — la connexion ne
+      // serait jamais créée et retrieveConnection échouerait ensuite.
+      const existing = await conn.isConnection(dbName, false);
+      if (!existing || existing.result !== true) {
+        await conn.createConnection(dbName, false, 'no-encryption', 1, false);
+      }
       const handle = await conn.retrieveConnection(dbName, false);
       return new CapacitorAdapter(handle);
     }
 
     case 'tauri': {
-      const { Database } = await import('@tauri-apps/plugin-sql');
+      const Database = tauriDatabaseClass();
       const handle = await Database.load(`sqlite:${dbName}`);
       return new TauriAdapter(handle);
     }
@@ -188,6 +259,7 @@ export {
   bootstrap,
   createAdapter,
   detectPlatform,
+  tauriDatabaseClass,
   Db,
   NodeAdapter,
   CapacitorAdapter,
